@@ -45,15 +45,12 @@ def create_snapshot(context, volume_id, description=None,name=None):
         os_snapshot = cinder.backups.create(
                 os_volume.id,
                 description=description,name=name)
-        #os_snapshot = cinder.volume_snapshots.create(
-        #        os_volume.id, force=True,
-        #        display_description=description)
         cleaner.addCleanup(os_snapshot.delete)
-        snapshot = db_api.add_item(context, 'snap', {'os_id': os_snapshot.id})
-        cleaner.addCleanup(db_api.delete_item, context, snapshot['id'])
+        #snapshot = db_api.add_item(context, 'snap', {'os_id': os_snapshot.id})
+        #cleaner.addCleanup(db_api.delete_item, context, snapshot['id'])
         #os_snapshot.update(display_name=snapshot['id'])
 
-    return _format_snapshot(context, snapshot, os_snapshot,
+    return _format_snapshot(context, None, os_snapshot,
                             volume_id=volume_id)
 
 
@@ -123,6 +120,8 @@ class SnapshotDescriber(common.TaggableItemsDescriber):
 
 
 def describe_snapshots(context, snapshot_id=None,detail=False,limit=None,marker=None):
+    if snapshot_id is not None:
+          marker=None
     if detail==True or snapshot_id is not None:
         formatted_snapshots = SnapshotDescriber().describe(
            context,ids=snapshot_id,max_results=limit,next_token=marker)
