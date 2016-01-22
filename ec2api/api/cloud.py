@@ -721,7 +721,7 @@ class CloudController(object):
         """
 
     @module_and_param_types(volume, 'int',
-                            'snap_id', 
+                            'str', 
                             'str','str')
     def create_volume(self, context, size=None,
                       snapshot_id=None,
@@ -806,10 +806,10 @@ class CloudController(object):
         The volume must be in the available state.
         """
 
-    @module_and_param_types(volume, 'str', 
+    @module_and_param_types(volume, 'str', 'bool',
                             'int', 'str')
-    def describe_volumes(self, context, volume_id=None, 
-                         max_results=None, next_token=None):
+    def describe_volumes(self, context, volume_id=None,detail=False,
+                         limit=None, marker=None):
         """Describes the specified EBS volumes.
 
         Args:
@@ -851,8 +851,8 @@ class CloudController(object):
             Returns true if the request succeeds.
         """
 
-    @module_and_param_types(snapshot, 'str')
-    def describe_snapshots(self, context, snapshot_id=None):
+    @module_and_param_types(snapshot, 'str','int','str')
+    def describe_snapshots(self, context, snapshot_id=None,limit=None, marker=None):
         """Describes one or more of the snapshots available to you.
 
         Args:
