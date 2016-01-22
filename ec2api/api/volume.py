@@ -45,15 +45,15 @@ def create_volume(context, size=None,
         os_volume = cinder.volumes.create(
             size,name=name,description=description)
         cleaner.addCleanup(os_volume.delete)
-        volume = db_api.add_item(context, 'vol', {'os_id': os_volume.id})
-        cleaner.addCleanup(db_api.delete_item, context, volume['id'])
+        #volume = db_api.add_item(context, 'vol', {'os_id': os_volume.id})
+        #cleaner.addCleanup(db_api.delete_item, context, volume['id'])
         if snapshot_id is not None:
               import time
               time.sleep(5)
               os_volume=cinder.restores.restore(backup_id=snapshot_id,volume_id=os_volume.id)
               return True
         else :
-              return _format_volume(context, volume, os_volume, snapshot_id=snapshot_id)
+              return _format_volume(context, None, os_volume, snapshot_id=snapshot_id)
   
 #        if snapshot_id is not None:
 #              os_volume.update(display_name=snapshot_id)
@@ -103,11 +103,8 @@ def detach_volume(context, volume_id, instance_id=None, device=None,
 def delete_volume(context, volume_id):
     #volume = ec2utils.get_db_item(context, volume_id)
     cinder = clients.cinder(context)
-    #pra=open('/tmp/pra2.log','a')
-    #pra.write("\n++++ volume['os_id'] is %s "%(volume['os_id']))
     try:
         cinder.volumes.delete(volume_id)
-        #cinder.volumes.delete(os_volume)
     except cinder_exception.BadRequest:
         # TODO(andrey-mp): raise correct errors for different cases
         raise exception.UnsupportedOperation()
@@ -163,7 +160,7 @@ class VolumeDescriberNoDetail(common.TaggableItemsDescriber):
     def format(self, volume, os_volume):
         #return _format_volume_delete(self.context,  os_volume)
         return _format_volume_no_detail(self.context, volume, os_volume,
-                              self.instances, self.snapshots)
+                              None, None)
 
     def get_db_items(self):
         self.instances = {i['os_id']: i
@@ -181,10 +178,8 @@ class VolumeDescriberNoDetail(common.TaggableItemsDescriber):
 
 def describe_volumes(context, volume_id=None,detail=False,
                      limit=None, marker=None):
-    if volume_id and max_results:
-        msg = _('The parameter volumeSet cannot be used with the parameter '
-                'maxResults')
-        raise exception.InvalidParameterCombination(msg)
+    if volume_id is not None:
+          marker=None
     cinder = clients.cinder(context)
     if volume_id is not None : 
         os_volume = cinder.volumes.get(volume_id)
@@ -270,5 +265,5 @@ def _format_attachment(context, volume, os_volume, instances={},
             'status': (os_volume.status
                        if os_volume.status in ('attaching', 'detaching') else
                        'attached' if os_attachment else 'detached'),
-            'volumeId': volume['id']}
+            'volumeId': os_volume.id}
     return ec2_attachment
