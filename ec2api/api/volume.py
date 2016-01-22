@@ -33,28 +33,36 @@ Validator = common.Validator
 def create_volume(context, size=None,
                   snapshot_id=None,
                   name=None,description=None):
-    if snapshot_id is not None:
-        snapshot = ec2utils.get_db_item(context, snapshot_id)
-        os_snapshot_id = snapshot['os_id']
-    else:
-        os_snapshot_id = None
-
+    #if snapshot_id is not None:
+    #    snapshot = ec2utils.get_db_item(context, snapshot_id)
+    #    os_snapshot_id = snapshot['os_id']
+    #else:
+    #    os_snapshot_id = None
     cinder = clients.cinder(context)
+    if size is None :
+       size=0
+    if snapshot_id is not None:
+       os_snapshot=cinder.backups.get(snapshot_id)
+       snap_size=os_snapshot.size
+       if snap_size >size :
+           size=snap_size
     with common.OnCrashCleaner() as cleaner:
         os_volume = cinder.volumes.create(
-                size, snapshot_id=os_snapshot_id,
-                name=name,description=description)
-               # availability_zone=availability_zone)
+            size,name=name,description=description)
         cleaner.addCleanup(os_volume.delete)
-
         volume = db_api.add_item(context, 'vol', {'os_id': os_volume.id})
         cleaner.addCleanup(db_api.delete_item, context, volume['id'])
+        if snapshot_id is not None:
+              import time
+              time.sleep(5)
+              os_volume=cinder.restores.restore(backup_id=snapshot_id,volume_id=os_volume.id)
+#        if snapshot_id is not None:
+#              os_volume.update(display_name=snapshot_id)
         #os_volume.update(display_name=name)
         #os_volume.update(name=name)
         #os_volume.update(description=volume['id'])
-
-    return _format_volume(context, volume, os_volume, snapshot_id=snapshot_id)
-
+    return True
+    #return _format_volume(context, volume, os_volume, snapshot_id=snapshot_id)
 
 def attach_volume(context, volume_id, instance_id, device):
     volume = ec2utils.get_db_item(context, volume_id)
@@ -116,6 +124,7 @@ def delete_volume(context, volume_id):
 class VolumeDescriber(common.TaggableItemsDescriber):
 
     KIND = 'vol'
+    SORT_KEY = 'volumeId'
     FILTER_MAP = {
                   'create-time': 'createTime',
                   'size': 'size',
@@ -144,18 +153,49 @@ class VolumeDescriber(common.TaggableItemsDescriber):
     def get_name(self, os_item):
         return ''
 
+class VolumeDescriberNoDetail(common.TaggableItemsDescriber):
 
-def describe_volumes(context, volume_id=None,
-                     max_results=None, next_token=None):
+    KIND = 'vol'
+    SORT_KEY = 'volumeId'
+    FILTER_MAP = {
+                  'status': 'status',
+                  'name': 'name',
+                  'volume-id': 'volumeId'}
+
+    def format(self, volume, os_volume):
+        #return _format_volume_delete(self.context,  os_volume)
+        return _format_volume_no_detail(self.context, volume, os_volume,
+                              self.instances, self.snapshots)
+
+    def get_db_items(self):
+        self.instances = {i['os_id']: i
+                          for i in db_api.get_items(self.context, 'i')}
+        self.snapshots = {s['os_id']: s
+                          for s in db_api.get_items(self.context, 'snap')}
+        return super(VolumeDescriberNoDetail, self).get_db_items()
+
+    def get_os_items(self):
+        return clients.cinder(self.context).volumes.list()
+
+    def get_name(self, os_item):
+        return ''
+
+
+def describe_volumes(context, volume_id=None,detail=False,
+                     limit=None, marker=None):
     if volume_id and max_results:
         msg = _('The parameter volumeSet cannot be used with the parameter '
                 'maxResults')
         raise exception.InvalidParameterCombination(msg)
     cinder = clients.cinder(context)
-    if volume_id is not None :
+    if volume_id is not None : 
         os_volume = cinder.volumes.get(volume_id)
-    formatted_volumes = VolumeDescriber().describe(
-        context, ids=volume_id)
+    if detail==True or volume_id is not None:
+        formatted_volumes = VolumeDescriber().describe(
+             context, ids=volume_id,max_results=limit,next_token=marker)
+    else : 
+        formatted_volumes = VolumeDescriberNoDetail().describe(
+             context, ids=volume_id,max_results=limit,next_token=marker)
     return {'volumeSet': formatted_volumes}
 
 def _format_volume_delete(context, os_volume):
@@ -173,6 +213,20 @@ def _format_volume_delete(context, os_volume):
 
     return ec2_volume
 
+def _format_volume_no_detail(context, volume, os_volume, instances={},
+                   snapshots={}, snapshot_id=None):
+    valid_ec2_api_volume_status_map = {
+        'attaching': 'in-use',
+        'detaching': 'in-use'}
+
+    ec2_volume = {
+            'volumeId': os_volume.id,
+            'status': valid_ec2_api_volume_status_map.get(os_volume.status,
+                                                          os_volume.status),
+            'name': os_volume.name,
+    }
+
+    return ec2_volume
 
 def _format_volume(context, volume, os_volume, instances={},
                    snapshots={}, snapshot_id=None):
