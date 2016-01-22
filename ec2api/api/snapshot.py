@@ -71,8 +71,31 @@ def delete_snapshot(context, snapshot_id):
     #return True
 
 
-class SnapshotDescriber(common.TaggableItemsDescriber):
+class SnapshotDescriberNoDetail(common.TaggableItemsDescriber):
+    SORT_KEY='snapshotId'
+    KIND = 'snap'
+    FILTER_MAP = {
+                  'snapshot-id': 'snapshotId',
+                  'status': 'status',
+                  'name': 'name'}
 
+    def format(self, snapshot, os_snapshot):
+        return _format_snapshot_no_detail(self.context, snapshot, os_snapshot,
+                                self.volumes)
+
+    def get_db_items(self):
+        self.volumes = {vol['os_id']: vol
+                        for vol in db_api.get_items(self.context, 'vol')}
+        return super(SnapshotDescriberNoDetail, self).get_db_items()
+
+    def get_os_items(self):
+        return clients.cinder(self.context).backups.list()
+
+    def get_name(self, os_item):
+        return ''
+
+class SnapshotDescriber(common.TaggableItemsDescriber):
+    SORT_KEY='snapshotId'
     KIND = 'snap'
     FILTER_MAP = {'description': 'description',
                   'snapshot-id': 'snapshotId',
@@ -99,9 +122,13 @@ class SnapshotDescriber(common.TaggableItemsDescriber):
         return ''
 
 
-def describe_snapshots(context, snapshot_id=None):
-    formatted_snapshots = SnapshotDescriber().describe(
-        context)
+def describe_snapshots(context, snapshot_id=None,detail=False,limit=None,marker=None):
+    if detail==True or snapshot_id is not None:
+        formatted_snapshots = SnapshotDescriber().describe(
+           context,ids=snapshot_id,max_results=limit,next_token=marker)
+    else :
+        formatted_snapshots = SnapshotDescriberNoDetail().describe(
+           context,ids=snapshot_id,max_results=limit,next_token=marker)
     return {'snapshotSet': formatted_snapshots}
 
 def _format_snapshot_delete(context, os_snapshot):
@@ -115,6 +142,12 @@ def _format_snapshot_delete(context, os_snapshot):
     mapped_status = status_map.get(os_snapshot.status, os_snapshot.status)
     return {'status':mapped_status}
 
+def _format_snapshot_no_detail(context, snapshot, os_snapshot, volumes={},
+                     volume_id=None):
+    return {'snapshotId': os_snapshot.id,
+            'volumeId': os_snapshot.volume_id,
+            'status': os_snapshot.status,
+            'name': os_snapshot.name}
 
 def _format_snapshot(context, snapshot, os_snapshot, volumes={},
                      volume_id=None):
