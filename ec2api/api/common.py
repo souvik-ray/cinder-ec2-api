@@ -272,7 +272,7 @@ class UniversalDescriber(object):
         pass
 
     def get_db_items(self):
-        return ec2utils.get_db_items(self.context, self.KIND, self.ids)
+        return ec2utils.get_db_items(self.context, self.KIND, set([]))
 
     def get_os_items(self):
         return []
@@ -359,44 +359,45 @@ class UniversalDescriber(object):
     def describe(self, context, ids=None, names=None, filter=None,max_results=None, next_token=None):
         self.context = context
         self.selective_describe = ids is not None or names is not None
-        self.ids = set(ids or [])
-        self.names = set(names or [])
         self.items = self.get_db_items()
+        self.ids = ids
+        self.names = set(names or [])
         self.os_items = self.get_os_items()
         formatted_items = []
 
-        self.items_dict = {i['os_id']: i for i in (self.items or [])}
+        #self.items_dict = {i['os_id']: i for i in (self.items or [])}
         paired_items_ids = set()
         for os_item in self.os_items:
             os_item_name = self.get_name(os_item)
             os_item_id = self.get_id(os_item)
-            item = self.items_dict.get(os_item_id, None)
+            #item = self.items_dict.get(os_item_id, None)
             # NOTE(Alex): Filter out items not requested in names or ids
+            item =None
             if (self.selective_describe and
                     not (os_item_name in self.names or
-                         (item and item['id'] in self.ids))):
+                         (os_item_id ==self.ids))):
                 continue
             # NOTE(Alex): Autoupdate DB for autoupdatable items
-            item = self.auto_update_db(item, os_item)
-            if item:
-                paired_items_ids.add(item['id'])
+            #item = self.auto_update_db(item, os_item)
+            #if item:
+            #    paired_items_ids.add(item['id'])
             formatted_item = self.format(item, os_item)
-            self.post_format(formatted_item, item)
-            if os_item_name in self.names:
-                self.names.remove(os_item_name)
-            if item and item['id'] in self.ids:
-                self.ids.remove(item['id'])
+            #self.post_format(formatted_item, item)
+            # if os_item_name in self.names:
+            #    self.names.remove(os_item_name)
+            #if item and item['id'] in self.ids:
+            #    self.ids.remove(item['id'])
             if (formatted_item and
                     not self.filtered_out(formatted_item, filter)):
                 formatted_items.append(formatted_item)
         # NOTE(Alex): delete obsolete items
-        for item in self.items:
-            if item['id'] not in paired_items_ids:
-                self.delete_obsolete_item(item)
+        #for item in self.items:
+        #    if item['id'] not in paired_items_ids:
+        #        self.delete_obsolete_item(item)
         # NOTE(Alex): some requested items are not found
-        if self.ids or self.names:
-            params = {'id': next(iter(self.ids or self.names))}
-            raise ec2utils.NOT_FOUND_EXCEPTION_MAP[self.KIND](**params)
+        #if self.ids or self.names:
+        #    params = {'id': next(iter(self.ids or self.names))}
+        #    raise ec2utils.NOT_FOUND_EXCEPTION_MAP[self.KIND](**params)
         #return formatted_items
         return self.get_paged(formatted_items, max_results, next_token)
 
