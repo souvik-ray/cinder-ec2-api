@@ -33,11 +33,6 @@ Validator = common.Validator
 def create_volume(context, size=None,
                   snapshot_id=None,
                   name=None,description=None):
-    #if snapshot_id is not None:
-    #    snapshot = ec2utils.get_db_item(context, snapshot_id)
-    #    os_snapshot_id = snapshot['os_id']
-    #else:
-    #    os_snapshot_id = None
     cinder = clients.cinder(context)
     if size is None :
        size=0
@@ -56,12 +51,15 @@ def create_volume(context, size=None,
               import time
               time.sleep(5)
               os_volume=cinder.restores.restore(backup_id=snapshot_id,volume_id=os_volume.id)
+              return True
+        else :
+              return _format_volume(context, volume, os_volume, snapshot_id=snapshot_id)
+  
 #        if snapshot_id is not None:
 #              os_volume.update(display_name=snapshot_id)
         #os_volume.update(display_name=name)
         #os_volume.update(name=name)
         #os_volume.update(description=volume['id'])
-    return True
     #return _format_volume(context, volume, os_volume, snapshot_id=snapshot_id)
 
 def attach_volume(context, volume_id, instance_id, device):
