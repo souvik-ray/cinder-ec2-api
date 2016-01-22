@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import base64
 import collections
 import fnmatch
 import inspect
-import operator
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -262,7 +260,6 @@ class UniversalDescriber(object):
     """Abstract Describer class for various Describe implementations."""
 
     KIND = ''
-    SORT_KEY = ''
     FILTER_MAP = {}
 
     def format(self, item=None, os_item=None):
@@ -332,31 +329,8 @@ class UniversalDescriber(object):
                 value = item.get(filter_name)
             values = [value] if value is not None else []
         return values
-    
-    def get_paged(self, formatted_items, max_results, next_token):
-        self.next_token = None
-        if not max_results and not next_token:
-            return formatted_items
 
-        if max_results and max_results > 1000:
-            max_results = 1000
-        formatted_items = sorted(formatted_items,
-                                 key=operator.itemgetter(self.SORT_KEY))
-        
-        next_item = 0 
-        if next_token:
-           for i, elem in enumerate(formatted_items):
-              if next_token == elem[self.SORT_KEY]:
-                 next_item = i+1
-        if next_item:
-            formatted_items = formatted_items[next_item:]
-        if max_results and max_results < len(formatted_items):
-            self.next_token = base64.b64encode(str(next_item + max_results))
-            formatted_items = formatted_items[:max_results]
-
-        return formatted_items
-
-    def describe(self, context, ids=None, names=None, filter=None,max_results=None, next_token=None):
+    def describe(self, context, ids=None, names=None, filter=None):
         self.context = context
         self.selective_describe = ids is not None or names is not None
         self.ids = set(ids or [])
@@ -397,8 +371,8 @@ class UniversalDescriber(object):
         if self.ids or self.names:
             params = {'id': next(iter(self.ids or self.names))}
             raise ec2utils.NOT_FOUND_EXCEPTION_MAP[self.KIND](**params)
-        #return formatted_items
-        return self.get_paged(formatted_items, max_results, next_token)
+        return formatted_items
+
 
 class TaggableItemsDescriber(UniversalDescriber):
 
@@ -432,7 +406,7 @@ class TaggableItemsDescriber(UniversalDescriber):
             # errors in AWS docs)
             formatted_item['tagSet'] = formatted_tags
 
-    def describe(self, context, ids=None, names=None, filter=None,max_results=None, next_token=None):
+    def describe(self, context, ids=None, names=None, filter=None):
         if filter:
             for f in filter:
                 if f['name'].startswith('tag:'):
@@ -442,7 +416,7 @@ class TaggableItemsDescriber(UniversalDescriber):
                     f['value'] = [{'key': tag_key,
                                    'value': tag_values}]
         return super(TaggableItemsDescriber, self).describe(
-            context, ids=ids, names=names, filter=filter,max_results=max_results, next_token=next_token)
+            context, ids, names, filter)
 
     def is_filtering_value_found(self, filter_value, value):
         if isinstance(filter_value, dict):

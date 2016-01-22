@@ -30,37 +30,28 @@ from ec2api.i18n import _
 Validator = common.Validator
 
 
-def create_volume(context, size=None,
-                  snapshot_id=None,
-                  name=None,description=None):
-    cinder = clients.cinder(context)
-    if size is None :
-       size=0
+def create_volume(context, availability_zone=None, size=None,
+                  snapshot_id=None, volume_type=None, iops=None,
+                  encrypted=None, kms_key_id=None):
     if snapshot_id is not None:
-       os_snapshot=cinder.backups.get(snapshot_id)
-       snap_size=os_snapshot.size
-       if snap_size >size :
-           size=snap_size
+        snapshot = ec2utils.get_db_item(context, snapshot_id)
+        os_snapshot_id = snapshot['os_id']
+    else:
+        os_snapshot_id = None
+
+    cinder = clients.cinder(context)
     with common.OnCrashCleaner() as cleaner:
         os_volume = cinder.volumes.create(
-            size,name=name,description=description)
+                size, snapshot_id=os_snapshot_id, volume_type=volume_type,
+                availability_zone=availability_zone)
         cleaner.addCleanup(os_volume.delete)
+
         volume = db_api.add_item(context, 'vol', {'os_id': os_volume.id})
         cleaner.addCleanup(db_api.delete_item, context, volume['id'])
-        if snapshot_id is not None:
-              import time
-              time.sleep(5)
-              os_volume=cinder.restores.restore(backup_id=snapshot_id,volume_id=os_volume.id)
-              return True
-        else :
-              return _format_volume(context, volume, os_volume, snapshot_id=snapshot_id)
-  
-#        if snapshot_id is not None:
-#              os_volume.update(display_name=snapshot_id)
-        #os_volume.update(display_name=name)
-        #os_volume.update(name=name)
-        #os_volume.update(description=volume['id'])
-    #return _format_volume(context, volume, os_volume, snapshot_id=snapshot_id)
+        os_volume.update(display_name=volume['id'])
+
+    return _format_volume(context, volume, os_volume, snapshot_id=snapshot_id)
+
 
 def attach_volume(context, volume_id, instance_id, device):
     volume = ec2utils.get_db_item(context, volume_id)
@@ -101,35 +92,31 @@ def detach_volume(context, volume_id, instance_id=None, device=None,
 
 
 def delete_volume(context, volume_id):
-    #volume = ec2utils.get_db_item(context, volume_id)
+    volume = ec2utils.get_db_item(context, volume_id)
     cinder = clients.cinder(context)
-    #pra=open('/tmp/pra2.log','a')
-    #pra.write("\n++++ volume['os_id'] is %s "%(volume['os_id']))
     try:
-        cinder.volumes.delete(volume_id)
-        #cinder.volumes.delete(os_volume)
+        cinder.volumes.delete(volume['os_id'])
     except cinder_exception.BadRequest:
         # TODO(andrey-mp): raise correct errors for different cases
         raise exception.UnsupportedOperation()
     except cinder_exception.NotFound:
         pass
-    os_volume = cinder.volumes.get(volume_id)
     # NOTE(andrey-mp) Don't delete item from DB until it disappears from Cloud
     # It will be deleted by describer in the future
-    return _format_volume_delete(context,os_volume)
+    return True
 
 
 class VolumeDescriber(common.TaggableItemsDescriber):
 
     KIND = 'vol'
-    SORT_KEY = 'volumeId'
-    FILTER_MAP = {
+    FILTER_MAP = {'availability-zone': 'availabilityZone',
                   'create-time': 'createTime',
+                  'encrypted': 'encrypted',
                   'size': 'size',
                   'snapshot-id': 'snapshotId',
                   'status': 'status',
-                  'name': 'name',
                   'volume-id': 'volumeId',
+                  'volume-type': 'volumeType',
                   'attachment.device': ['attachmentSet', 'device'],
                   'attachment.instance-id': ['attachmentSet', 'instanceId'],
                   'attachment.status': ['attachmentSet', 'status']}
@@ -151,80 +138,13 @@ class VolumeDescriber(common.TaggableItemsDescriber):
     def get_name(self, os_item):
         return ''
 
-class VolumeDescriberNoDetail(common.TaggableItemsDescriber):
 
-    KIND = 'vol'
-    SORT_KEY = 'volumeId'
-    FILTER_MAP = {
-                  'status': 'status',
-                  'name': 'name',
-                  'volume-id': 'volumeId'}
-
-    def format(self, volume, os_volume):
-        #return _format_volume_delete(self.context,  os_volume)
-        return _format_volume_no_detail(self.context, volume, os_volume,
-                              self.instances, self.snapshots)
-
-    def get_db_items(self):
-        self.instances = {i['os_id']: i
-                          for i in db_api.get_items(self.context, 'i')}
-        self.snapshots = {s['os_id']: s
-                          for s in db_api.get_items(self.context, 'snap')}
-        return super(VolumeDescriberNoDetail, self).get_db_items()
-
-    def get_os_items(self):
-        return clients.cinder(self.context).volumes.list()
-
-    def get_name(self, os_item):
-        return ''
-
-
-def describe_volumes(context, volume_id=None,detail=False,
-                     limit=None, marker=None):
-    if volume_id and max_results:
-        msg = _('The parameter volumeSet cannot be used with the parameter '
-                'maxResults')
-        raise exception.InvalidParameterCombination(msg)
-    cinder = clients.cinder(context)
-    if volume_id is not None : 
-        os_volume = cinder.volumes.get(volume_id)
-    if detail==True or volume_id is not None:
-        formatted_volumes = VolumeDescriber().describe(
-             context, ids=volume_id,max_results=limit,next_token=marker)
-    else : 
-        formatted_volumes = VolumeDescriberNoDetail().describe(
-             context, ids=volume_id,max_results=limit,next_token=marker)
+def describe_volumes(context, volume_id=None, filter=None,
+                     max_results=None, next_token=None):
+    formatted_volumes = VolumeDescriber().describe(
+        context, ids=volume_id, filter=filter)
     return {'volumeSet': formatted_volumes}
 
-def _format_volume_delete(context, os_volume):
-    valid_ec2_api_volume_status_map = {
-        'attaching': 'in-use',
-        'detaching': 'in-use',
-        'in-use': 'in-use',
-        'deleting': 'deleting',
-        'backingup': 'in-use'}
-
-    ec2_volume = {
-            'status': valid_ec2_api_volume_status_map.get(os_volume.status,
-                                                          os_volume.status),
-    }
-
-    return ec2_volume
-
-def _format_volume_no_detail(context, volume, os_volume, instances={},
-                   snapshots={}, snapshot_id=None):
-    valid_ec2_api_volume_status_map = {
-        'attaching': 'in-use',
-        'detaching': 'in-use'}
-
-    ec2_volume = {
-            'volumeId': os_volume.id,
-            'status': valid_ec2_api_volume_status_map.get(os_volume.status,
-                                                          os_volume.status),
-            'name': os_volume.name,
-    }
-
-    return ec2_volume
 
 def _format_volume(context, volume, os_volume, instances={},
                    snapshots={}, snapshot_id=None):
@@ -233,13 +153,14 @@ def _format_volume(context, volume, os_volume, instances={},
         'detaching': 'in-use'}
 
     ec2_volume = {
-            'volumeId': os_volume.id,
+            'volumeId': volume['id'],
             'status': valid_ec2_api_volume_status_map.get(os_volume.status,
                                                           os_volume.status),
             'size': os_volume.size,
-            'name': os_volume.name,
-            'description': os_volume.description,
+            'availabilityZone': os_volume.availability_zone,
             'createTime': os_volume.created_at,
+            'volumeType': os_volume.volume_type,
+            'encrypted': os_volume.encrypted,
     }
     if ec2_volume['status'] == 'in-use':
         ec2_volume['attachmentSet'] = (
@@ -251,7 +172,6 @@ def _format_volume(context, volume, os_volume, instances={},
                 context, 'snap', os_volume.snapshot_id, snapshots)
         snapshot_id = snapshot['id']
     ec2_volume['snapshotId'] = snapshot_id
-    #ec2_volume['name'] = os_volume.get('name')
 
     return ec2_volume
 

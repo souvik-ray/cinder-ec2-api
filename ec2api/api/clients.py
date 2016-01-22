@@ -133,8 +133,8 @@ def cinder(context):
         'cacert': CONF.ssl_ca_file
     }
 
-    _cinder = cinderclient.Client('2', **args)
-    management_url = _url_for(context, service_type='volumev2')
+    _cinder = cinderclient.Client('1', **args)
+    management_url = _url_for(context, service_type='volume')
     _cinder.client.auth_token = context.auth_token
     _cinder.client.management_url = management_url
 
