@@ -181,8 +181,6 @@ def describe_volumes(context, volume_id=None,detail=False,
     if volume_id is not None:
           marker=None
     cinder = clients.cinder(context)
-    if volume_id is not None : 
-        os_volume = cinder.volumes.get(volume_id)
     if detail==True or volume_id is not None:
         formatted_volumes = VolumeDescriber().describe(
              context, ids=volume_id,max_results=limit,next_token=marker)
