@@ -720,12 +720,12 @@ class CloudController(object):
             The console output of the instance, timestamp and instance id.
         """
 
-    @module_and_param_types(volume, 'str', 'int',
-                            'snap_id', 'str', 'int',
-                            'bool', 'str')
-    def create_volume(self, context, availability_zone=None, size=None,
-                      snapshot_id=None, volume_type=None, iops=None,
-                      encrypted=None, kms_key_id=None):
+    @module_and_param_types(volume, 'int',
+                            'str', 
+                            'str','str')
+    def create_volume(self, context, size=None,
+                      snapshot_id=None,
+                      name=None,description=None):
         """Creates an EBS volume.
 
         Args:
@@ -792,7 +792,7 @@ class CloudController(object):
             Information about the detachment.
         """
 
-    @module_and_param_types(volume, 'vol_id')
+    @module_and_param_types(volume, 'str')
     def delete_volume(self, context, volume_id):
         """Deletes the specified EBS volume.
 
@@ -806,10 +806,10 @@ class CloudController(object):
         The volume must be in the available state.
         """
 
-    @module_and_param_types(volume, 'vol_ids', 'filter',
+    @module_and_param_types(volume, 'str', 'bool',
                             'int', 'str')
-    def describe_volumes(self, context, volume_id=None, filter=None,
-                         max_results=None, next_token=None):
+    def describe_volumes(self, context, volume_id=None,detail=False,
+                         limit=None, marker=None):
         """Describes the specified EBS volumes.
 
         Args:
@@ -826,8 +826,8 @@ class CloudController(object):
             A list of volumes.
         """
 
-    @module_and_param_types(snapshot, 'vol_id', 'str')
-    def create_snapshot(self, context, volume_id, description=None):
+    @module_and_param_types(snapshot, 'str', 'str', 'str' )
+    def create_snapshot(self, context, volume_id, description=None,name=None):
         """Creates a snapshot of an EBS volume.
 
         Args:
@@ -839,7 +839,7 @@ class CloudController(object):
             Information about the snapshot.
         """
 
-    @module_and_param_types(snapshot, 'snap_id')
+    @module_and_param_types(snapshot, 'str')
     def delete_snapshot(self, context, snapshot_id):
         """Deletes the specified snapshot.
 
@@ -851,10 +851,8 @@ class CloudController(object):
             Returns true if the request succeeds.
         """
 
-    @module_and_param_types(snapshot, 'snap_ids', 'strs',
-                            'strs', 'filter')
-    def describe_snapshots(self, context, snapshot_id=None, owner=None,
-                           restorable_by=None, filter=None):
+    @module_and_param_types(snapshot, 'str','int','str')
+    def describe_snapshots(self, context, snapshot_id=None,limit=None, marker=None):
         """Describes one or more of the snapshots available to you.
 
         Args:
