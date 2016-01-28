@@ -34,13 +34,17 @@ def create_volume(context, size=None,
                   snapshot_id=None,
                   name=None,description=None):
     cinder = clients.cinder(context)
-    if size is None :
-       size=0
+    if size is None and snapshot_id is None :
+        reason = _('size not specified ')
+        raise exception.Unsupported(_(reason))
+        #size=0
     if snapshot_id is not None:
        os_snapshot=cinder.backups.get(snapshot_id)
        snap_size=os_snapshot.size
        if snap_size >size :
-           size=snap_size
+           reason = _('size specified should be greater than snapshot_size')
+           raise exception.Unsupported(_(reason))
+           #size=snap_size
     with common.OnCrashCleaner() as cleaner:
         os_volume = cinder.volumes.create(
             size,name=name,description=description)
@@ -195,6 +199,8 @@ def _format_volume_delete(context, os_volume):
         'detaching': 'in-use',
         'in-use': 'in-use',
         'deleting': 'deleting',
+        'error-deleting': 'error_deleting',
+        'error': 'error_deleting',
         'backingup': 'in-use'}
 
     ec2_volume = {
@@ -207,8 +213,15 @@ def _format_volume_delete(context, os_volume):
 def _format_volume_no_detail(context, volume, os_volume, instances={},
                    snapshots={}, snapshot_id=None):
     valid_ec2_api_volume_status_map = {
-        'attaching': 'in-use',
-        'detaching': 'in-use'}
+        'attaching': 'attaching',
+        'detaching': 'detaching',
+        'creating': 'creating',
+        'available': 'available',
+        'in-use':'in-use',
+        'deleting':'deleting',
+        'error-creating':'error_creating',
+        'error-deleting':'error_deleting',
+        'error':'error'}
 
     ec2_volume = {
             'volumeId': os_volume.id,
@@ -222,28 +235,36 @@ def _format_volume_no_detail(context, volume, os_volume, instances={},
 def _format_volume(context, volume, os_volume, instances={},
                    snapshots={}, snapshot_id=None):
     valid_ec2_api_volume_status_map = {
-        'attaching': 'in-use',
-        'detaching': 'in-use'}
+        'attaching': 'attaching',
+        'detaching': 'detaching',
+        'creating': 'creating',
+        'available': 'available',
+        'in-use':'in-use',
+        'deleting':'deleting',
+        'error-creating':'error_creating',
+        'error-deleting':'error_deleting',
+        'error':'error'}
 
     ec2_volume = {
-            'volumeId': os_volume.id,
-            'status': valid_ec2_api_volume_status_map.get(os_volume.status,
-                                                          os_volume.status),
-            'size': os_volume.size,
             'name': os_volume.name,
             'description': os_volume.description,
-            'createTime': os_volume.created_at,
+            'snapshotId': os_volume.snapshot_id,
+            'size': os_volume.size,
+            'status': valid_ec2_api_volume_status_map.get(os_volume.status,
+                                                          os_volume.status),
+            'volumeId': os_volume.id,
+            'createAt': os_volume.created_at,
     }
     if ec2_volume['status'] == 'in-use':
         ec2_volume['attachmentSet'] = (
                 [_format_attachment(context, volume, os_volume, instances)])
     else:
         ec2_volume['attachmentSet'] = {}
-    if snapshot_id is None and os_volume.snapshot_id:
-        snapshot = ec2utils.get_db_item_by_os_id(
-                context, 'snap', os_volume.snapshot_id, snapshots)
-        snapshot_id = snapshot['id']
-    ec2_volume['snapshotId'] = snapshot_id
+    #if snapshot_id is None and os_volume.snapshot_id:
+    #    snapshot = ec2utils.get_db_item_by_os_id(
+    #            context, 'snap', os_volume.snapshot_id, snapshots)
+    #    snapshot_id = snapshot['id']
+    #ec2_volume['snapshotId'] = os_volume.snapshot_id
     #ec2_volume['name'] = os_volume.get('name')
 
     return ec2_volume
@@ -258,10 +279,10 @@ def _format_attachment(context, volume, os_volume, instances={},
                 context, 'i', os_instance_id, instances)
         instance_id = instance['id']
     ec2_attachment = {
-            'device': os_attachment.get('device'),
+            'mountPoint': os_attachment.get('device'),
             'instanceId': instance_id,
-            'status': (os_volume.status
-                       if os_volume.status in ('attaching', 'detaching') else
-                       'attached' if os_attachment else 'detached'),
-            'volumeId': os_volume.id}
+            #'status': (os_volume.status
+            #           if os_volume.status in ('attaching', 'detaching') else
+            #           'attached' if os_attachment else 'detached'),
+            'hostName': instance['id']}
     return ec2_attachment
