@@ -851,8 +851,8 @@ class CloudController(object):
             Returns true if the request succeeds.
         """
 
-    @module_and_param_types(snapshot, 'str','int','str')
-    def describe_snapshots(self, context, snapshot_id=None,limit=None, marker=None):
+    @module_and_param_types(snapshot, 'str','bool','int','str')
+    def describe_snapshots(self, context, snapshot_id=None,detail=False,limit=None, marker=None):
         """Describes one or more of the snapshots available to you.
 
         Args:

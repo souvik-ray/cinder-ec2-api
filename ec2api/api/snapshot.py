@@ -36,8 +36,7 @@ def create_snapshot(context, volume_id, description=None,name=None):
     # NOTE(ft): Easy fix to allow snapshot creation in statuses other than
     # AVAILABLE without cinder modifications. Potential race condition
     # though. Seems arguably non-fatal.
-    if os_volume.status not in ['available', 'in-use',
-                                'attaching', 'detaching']:
+    if os_volume.status not in ['available', 'in-use']:
         msg = (_("'%s' is not in a state where snapshots are allowed.") %
                volume_id)
         raise exception.IncorrectState(reason=msg)
@@ -46,16 +45,12 @@ def create_snapshot(context, volume_id, description=None,name=None):
                 os_volume.id,
                 description=description,name=name)
         cleaner.addCleanup(os_snapshot.delete)
-        #snapshot = db_api.add_item(context, 'snap', {'os_id': os_snapshot.id})
-        #cleaner.addCleanup(db_api.delete_item, context, snapshot['id'])
-        #os_snapshot.update(display_name=snapshot['id'])
 
     return _format_snapshot(context, None, os_snapshot,
                             volume_id=volume_id)
 
 
 def delete_snapshot(context, snapshot_id):
-    #snapshot = ec2utils.get_db_item(context, snapshot_id)
     cinder = clients.cinder(context)
     try:
         cinder.backups.delete(snapshot_id)
@@ -131,34 +126,38 @@ def describe_snapshots(context, snapshot_id=None,detail=False,limit=None,marker=
     return {'snapshotSet': formatted_snapshots}
 
 def _format_snapshot_delete(context, os_snapshot):
-    status_map = {'new': 'pending',
-                  'creating': 'creating',
+    status_map = {'new': 'error-deleting',
+                  'creating': 'error-deleting',
                   'available': 'available',
-                  'active': 'active',
+                  'active': 'available',
                   'deleting': 'deleting',
-                  'deleted': 'deleted',
-                  'error': 'error'}
+                  'deleted': 'deleting',
+                  'error-deleting': 'error-deleting',
+                  'error': 'error_deleting'}
     mapped_status = status_map.get(os_snapshot.status, os_snapshot.status)
     return {'status':mapped_status}
 
 def _format_snapshot_no_detail(context, snapshot, os_snapshot, volumes={},
                      volume_id=None):
-    return {'snapshotId': os_snapshot.id,
+    return {
+            'name': os_snapshot.name,
+            'snapshotId': os_snapshot.id,
             'volumeId': os_snapshot.volume_id,
-            'status': os_snapshot.status,
-            'name': os_snapshot.name}
+            'status': os_snapshot.status}
 
 def _format_snapshot(context, snapshot, os_snapshot, volumes={},
                      volume_id=None):
     # NOTE(mikal): this is just a set of strings in cinder. If they
     # implement an enum, then we should move this code to use it. The
     # valid ec2 statuses are "pending", "completed", and "error".
-    status_map = {'new': 'pending',
+    status_map = {'new': 'creating',
                   'creating': 'creating',
                   'available': 'available',
-                  'active': 'active',
+                  'active': 'available',
                   'deleting': 'deleting',
-                  'deleted': 'deleted',
+                  'deleted': 'deleting',
+                  'error-creating': 'error_creting',
+                  'error-deleting': 'error_deleting',
                   'error': 'error'}
 
     mapped_status = status_map.get(os_snapshot.status, os_snapshot.status)
@@ -177,12 +176,13 @@ def _format_snapshot(context, snapshot, os_snapshot, volumes={},
     #progress = os_snapshot.progress
     #if not progress:
     #progress = '0%'
-    return {'snapshotId': os_snapshot.id,
-            'volumeId': volume_id,
-            'status': mapped_status,
-            'description': os_snapshot.description,
+    return {
             'name': os_snapshot.name,
-            'startTime': os_snapshot.created_at,
-            'volumeSize': os_snapshot.size}
+            'description': os_snapshot.description,
+            'snapshotId': os_snapshot.id,
+            'volumeId': volume_id,
+            'Size': os_snapshot.size,
+            'status': mapped_status,
+            'createdAt': os_snapshot.created_at}
             #'ownerId': ownerId,
             #'description': os_snapshot.display_description}
