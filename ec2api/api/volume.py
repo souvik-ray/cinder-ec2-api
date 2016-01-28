@@ -105,7 +105,6 @@ def detach_volume(context, volume_id, instance_id=None, device=None,
 
 
 def delete_volume(context, volume_id):
-    #volume = ec2utils.get_db_item(context, volume_id)
     cinder = clients.cinder(context)
     try:
         cinder.volumes.delete(volume_id)
@@ -260,13 +259,6 @@ def _format_volume(context, volume, os_volume, instances={},
                 [_format_attachment(context, volume, os_volume, instances)])
     else:
         ec2_volume['attachmentSet'] = {}
-    #if snapshot_id is None and os_volume.snapshot_id:
-    #    snapshot = ec2utils.get_db_item_by_os_id(
-    #            context, 'snap', os_volume.snapshot_id, snapshots)
-    #    snapshot_id = snapshot['id']
-    #ec2_volume['snapshotId'] = os_volume.snapshot_id
-    #ec2_volume['name'] = os_volume.get('name')
-
     return ec2_volume
 
 

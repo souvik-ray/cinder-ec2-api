@@ -45,16 +45,12 @@ def create_snapshot(context, volume_id, description=None,name=None):
                 os_volume.id,
                 description=description,name=name)
         cleaner.addCleanup(os_snapshot.delete)
-        #snapshot = db_api.add_item(context, 'snap', {'os_id': os_snapshot.id})
-        #cleaner.addCleanup(db_api.delete_item, context, snapshot['id'])
-        #os_snapshot.update(display_name=snapshot['id'])
 
     return _format_snapshot(context, None, os_snapshot,
                             volume_id=volume_id)
 
 
 def delete_snapshot(context, snapshot_id):
-    #snapshot = ec2utils.get_db_item(context, snapshot_id)
     cinder = clients.cinder(context)
     try:
         cinder.backups.delete(snapshot_id)
