@@ -273,8 +273,5 @@ def _format_attachment(context, volume, os_volume, instances={},
     ec2_attachment = {
             'mountPoint': os_attachment.get('device'),
             'instanceId': instance_id,
-            #'status': (os_volume.status
-            #           if os_volume.status in ('attaching', 'detaching') else
-            #           'attached' if os_attachment else 'detached'),
             'hostName': instance['id']}
     return ec2_attachment
