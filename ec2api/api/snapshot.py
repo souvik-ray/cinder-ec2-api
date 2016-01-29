@@ -87,10 +87,12 @@ class SnapshotDescriber(object):
         else :
             return [clients.cinder(self.context).backups.get(ids)]
 
+
+
 def describe_snapshots(context, snapshot_id=None, detail=False,
                        max_results=None, next_token=None):
     if snapshot_id is not None:
-        formatted_snapshots = SnapshotDescriber().describe(context, ids=snapshot_id)
+        formatted_snapshots = SnapshotDescriber().describe(context, ids=snapshot_id,detail=True)
     else :
         formatted_snapshots = SnapshotDescriber().describe(
            context, detail=detail, max_results=max_results, next_token=next_token)

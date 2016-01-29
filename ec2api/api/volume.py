@@ -107,8 +107,8 @@ class VolumeDescriber(object):
 
 def describe_volumes(context, volume_id=None,detail=False,
                      max_results=None, next_token=None):
-    if volume_id is not None:
-        formatted_volumes = VolumeDescriber().describe(context, ids=volume_id)
+    if volume_id is not None :
+        formatted_volumes = VolumeDescriber().describe(context, ids=volume_id,detail=True)
     else :
         formatted_volumes = VolumeDescriber().describe(
              context, detail=detail, max_results=max_results, next_token=next_token)
