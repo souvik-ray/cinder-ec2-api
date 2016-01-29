@@ -809,7 +809,7 @@ class CloudController(object):
     @module_and_param_types(volume, 'str', 'bool',
                             'int', 'str')
     def describe_volumes(self, context, volume_id=None,detail=False,
-                         limit=None, marker=None):
+                         max_results=None, next_token=None):
         """Describes the specified EBS volumes.
 
         Args:
@@ -852,7 +852,8 @@ class CloudController(object):
         """
 
     @module_and_param_types(snapshot, 'str','bool','int','str')
-    def describe_snapshots(self, context, snapshot_id=None,detail=False,limit=None, marker=None):
+    def describe_snapshots(self, context, snapshot_id=None,detail=False,
+                           max_results=None, next_token=None):
         """Describes one or more of the snapshots available to you.
 
         Args:

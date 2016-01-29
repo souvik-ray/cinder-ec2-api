@@ -29,25 +29,23 @@ from ec2api.i18n import _
 Validator = common.Validator
 
 
-def create_snapshot(context, volume_id, description=None,name=None):
-    #volume = ec2utils.get_db_item(context, volume_id)
+def create_snapshot(context, volume_id, description=None, name=None):
     cinder = clients.cinder(context)
     os_volume = cinder.volumes.get(volume_id)
     # NOTE(ft): Easy fix to allow snapshot creation in statuses other than
     # AVAILABLE without cinder modifications. Potential race condition
     # though. Seems arguably non-fatal.
-    if os_volume.status not in ['available', 'in-use']:
+    if os_volume.status not in ['available', 'in-use',
+                                'attaching', 'detaching']:
         msg = (_("'%s' is not in a state where snapshots are allowed.") %
                volume_id)
         raise exception.IncorrectState(reason=msg)
     with common.OnCrashCleaner() as cleaner:
         os_snapshot = cinder.backups.create(
-                os_volume.id,
-                description=description,name=name)
+                os_volume.id, description=description, name=name)
         cleaner.addCleanup(os_snapshot.delete)
 
-    return _format_snapshot(context, None, os_snapshot,
-                            volume_id=volume_id)
+    return _format_snapshot(context, os_snapshot)
 
 
 def delete_snapshot(context, snapshot_id):
@@ -59,130 +57,83 @@ def delete_snapshot(context, snapshot_id):
     os_snapshot=cinder.backups.get(snapshot_id)
     # NOTE(andrey-mp) Don't delete item from DB until it disappears from Cloud
     # It will be deleted by describer in the future
-    return _format_snapshot_delete(context,os_snapshot)
-    #return True
+    return True
 
 
-class SnapshotDescriberNoDetail(common.TaggableItemsDescriber):
-    SORT_KEY='snapshotId'
-    KIND = 'snap'
-    FILTER_MAP = {
-                  'snapshot-id': 'snapshotId',
-                  'status': 'status',
-                  'name': 'name'}
+class SnapshotDescriber(object):
 
-    def format(self, snapshot, os_snapshot):
-        return _format_snapshot_no_detail(self.context, snapshot, os_snapshot,
-                                self.volumes)
+    def describe(self, context, ids=None, detail=False, max_results=None, next_token=None):
+        self.context = context
+        os_items = self.get_os_items(ids, max_results, next_token, detail)
+        formatted_items = []
 
-    def get_db_items(self):
-        self.volumes = {vol['os_id']: vol
-                        for vol in db_api.get_items(self.context, 'vol')}
-        return super(SnapshotDescriberNoDetail, self).get_db_items()
+        for os_item in os_items:
+            formatted_item = self.format(os_item, detail)
+            if formatted_item:
+                formatted_items.append(formatted_item)
+        return formatted_items
 
-    def get_os_items(self):
-        return clients.cinder(self.context).backups.list()
+    def format(self, os_snapshot, detail):
+        if detail == True :
+            return _format_snapshot(self.context, os_snapshot)
+        else :
+            return _format_snapshot_no_detail(self.context, os_snapshot)
 
-    def get_name(self, os_item):
-        return ''
+    def get_os_items(self, ids, max_results, next_token, detail):
+        if ids is None :
+            #TODO
+            #Handling of limit and marker
+            return clients.cinder(self.context).backups.list()
+        else :
+            return [clients.cinder(self.context).backups.get(ids)]
 
-class SnapshotDescriber(common.TaggableItemsDescriber):
-    SORT_KEY='snapshotId'
-    KIND = 'snap'
-    FILTER_MAP = {'description': 'description',
-                  'snapshot-id': 'snapshotId',
-                  'start-time': 'startTime',
-                  'status': 'status',
-                  'description': 'description',
-                  'name': 'name',
-                  'volume-id': 'volumeId',
-                  'volume-size': 'volumeSize'}
-
-    def format(self, snapshot, os_snapshot):
-        return _format_snapshot(self.context, snapshot, os_snapshot,
-                                self.volumes)
-
-    def get_db_items(self):
-        self.volumes = {vol['os_id']: vol
-                        for vol in db_api.get_items(self.context, 'vol')}
-        return super(SnapshotDescriber, self).get_db_items()
-
-    def get_os_items(self):
-        return clients.cinder(self.context).backups.list()
-
-    def get_name(self, os_item):
-        return ''
-
-
-def describe_snapshots(context, snapshot_id=None,detail=False,limit=None,marker=None):
+def describe_snapshots(context, snapshot_id=None, detail=False,
+                       max_results=None, next_token=None):
     if snapshot_id is not None:
-          marker=None
-    if detail==True or snapshot_id is not None:
-        formatted_snapshots = SnapshotDescriber().describe(
-           context,ids=snapshot_id,max_results=limit,next_token=marker)
+        formatted_snapshots = SnapshotDescriber().describe(context, ids=snapshot_id)
     else :
-        formatted_snapshots = SnapshotDescriberNoDetail().describe(
-           context,ids=snapshot_id,max_results=limit,next_token=marker)
+        formatted_snapshots = SnapshotDescriber().describe(
+           context, detail=detail, max_results=max_results, next_token=next_token)
     return {'snapshotSet': formatted_snapshots}
 
-def _format_snapshot_delete(context, os_snapshot):
-    status_map = {'new': 'error-deleting',
-                  'creating': 'error-deleting',
-                  'available': 'available',
-                  'active': 'available',
-                  'deleting': 'deleting',
-                  'deleted': 'deleting',
-                  'error-deleting': 'error-deleting',
-                  'error': 'error_deleting'}
-    mapped_status = status_map.get(os_snapshot.status, os_snapshot.status)
-    return {'status':mapped_status}
+def _format_snapshot_no_detail(context, os_snapshot):
+    status_map = {'creating': 'pending',
+                  'available': 'completed',
+                  'deleting': None,
+                  'restoring': 'completed',
+                  'error_restoring': 'completed',
+                  'error': 'error'}
 
-def _format_snapshot_no_detail(context, snapshot, os_snapshot, volumes={},
-                     volume_id=None):
+    mapped_status = status_map.get(os_snapshot.status, os_snapshot.status)
+    if not mapped_status or mapped_status is None:
+        return None
+    
     return {
             'name': os_snapshot.name,
             'snapshotId': os_snapshot.id,
             'volumeId': os_snapshot.volume_id,
-            'status': os_snapshot.status}
+            'status': mapped_status}
 
-def _format_snapshot(context, snapshot, os_snapshot, volumes={},
-                     volume_id=None):
+def _format_snapshot(context, os_snapshot):
     # NOTE(mikal): this is just a set of strings in cinder. If they
     # implement an enum, then we should move this code to use it. The
     # valid ec2 statuses are "pending", "completed", and "error".
-    status_map = {'new': 'creating',
-                  'creating': 'creating',
-                  'available': 'available',
-                  'active': 'available',
-                  'deleting': 'deleting',
-                  'deleted': 'deleting',
-                  'error-creating': 'error_creting',
-                  'error-deleting': 'error_deleting',
+    status_map = {'creating': 'pending',
+                  'available': 'completed',
+                  'deleting': None,
+                  'restoring': 'completed',
+                  'error_restoring': 'completed',
                   'error': 'error'}
 
     mapped_status = status_map.get(os_snapshot.status, os_snapshot.status)
-    if not mapped_status:
+    if not mapped_status or mapped_status is None:
         return None
 
-    #if not volume_id and os_snapshot.volume_id:
-       # volume = ec2utils.get_db_item_by_os_id(
-       #         context, 'vol', os_snapshot.volume_id, volumes
-    volume_id = os_snapshot.volume_id
-
-    # NOTE(andrey-mp): ownerId and progress are empty in just created snapshot
-    #ownerId = os_snapshot.project_id
-    #if not ownerId:
-    #ownerId = context.project_id
-    #progress = os_snapshot.progress
-    #if not progress:
-    #progress = '0%'
     return {
             'name': os_snapshot.name,
             'description': os_snapshot.description,
             'snapshotId': os_snapshot.id,
-            'volumeId': volume_id,
-            'Size': os_snapshot.size,
+            'volumeId': os_snapshot.volume_id,
+            'volumeSize': os_snapshot.size,
             'status': mapped_status,
-            'createdAt': os_snapshot.created_at}
-            #'ownerId': ownerId,
-            #'description': os_snapshot.display_description}
+            'startTime': os_snapshot.created_at}
