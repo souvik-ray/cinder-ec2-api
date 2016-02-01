@@ -57,10 +57,8 @@ def create_volume(context, size=None, snapshot_id=None,
         msg = _('Size specified should be greater than size of the snapshot.')
         raise exception.InvalidInput(reason=msg)
 
-    #TODO
-    # This case needs to be handled.
     with common.OnCrashCleaner() as cleaner:
-        os_volume = cinder.restores.restore(backup_id=snapshot_id)
+        os_volume = cinder.restores.restore(backup_id=snapshot_id, volume_size=size)
         cleaner.addCleanup(os_volume.delete)
         return _format_volume(context, os_volume)
 
@@ -101,7 +99,7 @@ class VolumeDescriber(object):
 
     def get_os_items(self, ids, max_results, next_token, detail):
         if ids is None :
-            return clients.cinder(self.context).volumes.list(marker=next_token, limit=max_results)
+            return clients.cinder(self.context).volumes.list(marker=next_token, limit=max_results, detailed=true)
         else :
             return [clients.cinder(self.context).volumes.get(ids)]
 
@@ -109,7 +107,7 @@ class VolumeDescriber(object):
 def describe_volumes(context, volume_id=None,detail=False,
                      max_results=None, next_token=None):
     if volume_id is not None :
-        formatted_volumes = VolumeDescriber().describe(context, ids=volume_id,detail=True)
+        formatted_volumes = VolumeDescriber().describe(context, ids=volume_id, detail=True)
     else :
         formatted_volumes = VolumeDescriber().describe(
              context, detail=detail, max_results=max_results, next_token=next_token)

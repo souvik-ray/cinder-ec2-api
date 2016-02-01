@@ -81,9 +81,7 @@ class SnapshotDescriber(object):
 
     def get_os_items(self, ids, max_results, next_token, detail):
         if ids is None :
-            #TODO
-            #Handling of limit and marker
-            return clients.cinder(self.context).backups.list()
+            return clients.cinder(self.context).backups.list(marker=next_token, limit=max_results, detailed=True)
         else :
             return [clients.cinder(self.context).backups.get(ids)]
 
@@ -92,7 +90,7 @@ class SnapshotDescriber(object):
 def describe_snapshots(context, snapshot_id=None, detail=False,
                        max_results=None, next_token=None):
     if snapshot_id is not None:
-        formatted_snapshots = SnapshotDescriber().describe(context, ids=snapshot_id,detail=True)
+        formatted_snapshots = SnapshotDescriber().describe(context, ids=snapshot_id, detail=True)
     else :
         formatted_snapshots = SnapshotDescriber().describe(
            context, detail=detail, max_results=max_results, next_token=next_token)
