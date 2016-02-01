@@ -73,7 +73,8 @@ def delete_volume(context, volume_id):
         # TODO(andrey-mp): raise correct errors for different cases
         raise exception.UnsupportedOperation()
     except cinder_exception.NotFound:
-        pass
+        msg = _('Requested volume not found')
+        raise exception.InvalidInput(reason=msg)
     # NOTE(andrey-mp) Don't delete item from DB until it disappears from Cloud
     # It will be deleted by describer in the future
     return True
