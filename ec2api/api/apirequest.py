@@ -98,11 +98,10 @@ class APIRequest(object):
 
         response_el = xml.createElement(self.action + 'Response')
         response_el.setAttribute('xmlns',
-                                 'http://ec2.amazonaws.com/doc/%s/'
-                                 % self.version)
-        request_id_el = xml.createElement('requestId')
-        request_id_el.appendChild(xml.createTextNode(request_id))
-        response_el.appendChild(request_id_el)
+                                 'http://compute.jiocloudservices.com/doc/2016-03-01/')
+        #request_id_el = xml.createElement('requestId')
+        #request_id_el.appendChild(xml.createTextNode(request_id))
+        #response_el.appendChild(request_id_el)
         if response_data is True:
             self._render_dict(xml, response_el, {'return': 'true'})
         else:
