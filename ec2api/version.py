@@ -14,4 +14,4 @@
 
 import pbr.version
 
-version_info = pbr.version.VersionInfo('ec2-api')
+version_info = pbr.version.VersionInfo('cinder-ec2-api')
