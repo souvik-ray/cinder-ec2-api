@@ -178,94 +178,51 @@ class EC2KeystoneAuth(wsgi.Middleware):
         # NOTE(alevine) We need to calculate the hash here because
         # subsequent access to request modifies the req.body so the hash
         # calculation will yield invalid results.
-        body_hash = hashlib.sha256(req.body).hexdigest()
+#        body_hash = hashlib.sha256(req.body).hexdigest()
 
-        signature = self._get_signature(req)
-        if not signature:
-            msg = _("Signature not provided")
+#        signature = self._get_signature(req)
+#        if not signature:
+#            msg = _("Signature not provided")
+#            return faults.ec2_error_response(request_id, "AuthFailure", msg,
+#                                             status=400)
+#       access = self._get_access(req)
+#        if not access:
+#            msg = _("Access key not provided")
+#            return faults.ec2_error_response(request_id, "AuthFailure", msg,
+#                                             status=400)
+
+#       if 'X-Amz-Signature' in req.params or 'Authorization' in req.headers:
+#           params = {}
+#       else:
+#            # Make a copy of args for authentication and signature verification
+#        #params = dict(req.params)
+#            # Not part of authentication arg
+#       #params.pop('Signature', None)
+        token_id=req.params.get('TokenId')
+        user_id=req.params.get('UserId')
+        project_id=req.params.get('ProjectId')
+        if not token_id:
+            msg = _("TokenID not provided")
             return faults.ec2_error_response(request_id, "AuthFailure", msg,
                                              status=400)
-        access = self._get_access(req)
-        if not access:
-            msg = _("Access key not provided")
-            return faults.ec2_error_response(request_id, "AuthFailure", msg,
+        if not user_id:
+            msg = _("UserID not provided")
+            return faults.ect2_error_response(request_id, "AuthFailure", msg,
                                              status=400)
-
-        if 'X-Amz-Signature' in req.params or 'Authorization' in req.headers:
-            params = {}
-        else:
-            # Make a copy of args for authentication and signature verification
-            params = dict(req.params)
-            # Not part of authentication args
-            params.pop('Signature', None)
-
-        cred_dict = {
-            'access': access,
-            'signature': signature,
-            'host': req.host,
-            'verb': req.method,
-            'path': req.path,
-            'params': params,
-            'headers': req.headers,
-            'body_hash': body_hash
-        }
-
-        token_url = CONF.keystone_ec2_tokens_url
-        if "ec2" in token_url:
-            creds = {'ec2Credentials': cred_dict}
-        else:
-            creds = {'auth': {'OS-KSEC2:ec2Credentials': cred_dict}}
-        creds_json = jsonutils.dumps(creds)
-        headers = {'Content-Type': 'application/json'}
-
-        verify = CONF.ssl_ca_file or not CONF.ssl_insecure
-        response = requests.request('POST', token_url, verify=verify,
-                                    data=creds_json, headers=headers)
-        status_code = response.status_code
-        if status_code != 200:
-            msg = response.reason
-            return faults.ec2_error_response(request_id, "AuthFailure", msg,
-                                             status=status_code)
-        result = response.json()
-
-        try:
-            if 'token' in result:
-                # NOTE(andrey-mp): response from keystone v3
-                token_id = response.headers['x-subject-token']
-                user_id = result['token']['user']['id']
-                project_id = result['token']['project']['id']
-                user_name = result['token']['user'].get('name')
-                project_name = result['token']['project'].get('name')
-                roles = []
-                catalog = result['token']['catalog']
-            else:
-                token_id = result['access']['token']['id']
-                user_id = result['access']['user']['id']
-                project_id = result['access']['token']['tenant']['id']
-                user_name = result['access']['user'].get('name')
-                project_name = result['access']['token']['tenant'].get('name')
-                roles = [role['name'] for role
-                         in result['access']['user']['roles']]
-                catalog = result['access']['serviceCatalog']
-        except (AttributeError, KeyError):
-            LOG.exception(_("Keystone failure"))
-            msg = _("Failure communicating with keystone")
+        if not project_id:
+            msg = _("ProjectID not provided")
             return faults.ec2_error_response(request_id, "AuthFailure", msg,
                                              status=400)
 
-        remote_address = req.remote_addr
-        if CONF.use_forwarded_for:
-            remote_address = req.headers.get('X-Forwarded-For',
-                                             remote_address)
-
-        ctxt = context.RequestContext(user_id, project_id,
-                                      user_name=user_name,
-                                      project_name=project_name,
-                                      roles=roles,
-                                      auth_token=token_id,
-                                      remote_address=remote_address,
-                                      service_catalog=catalog,
-                                      api_version=req.params.get('Version'))
+        ctxt = context.RequestContext(user_id, 
+                                      project_id,
+                                      #user_name=user_name_local,
+                                      #project_name=project_name_local,
+                                      #roles=roles_local,
+                                      auth_token=token_id)#,
+                                      #remote_address=remote_address,
+                                      #service_catalog=catalog_local,
+                                      #api_version=req.params.get('Version'))
 
         req.environ['ec2api.context'] = ctxt
 
