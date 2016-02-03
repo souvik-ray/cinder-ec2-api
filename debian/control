@@ -92,9 +92,7 @@ Depends:
  python-pyasn1-modules,
  python-cinderclient (>=1.1.0),
  python-neutronclient (>=2.3.11),
- python-sqlalchemy-migrate (>=0.9.5),
- ${misc:Depends},
- ${python:Depends}
+ python-sqlalchemy-migrate (>=0.9.5)
 Description: Cinder Python libraries
  OpenStack is a reliable cloud infrastructure. Its mission is to produce
  the ubiquitous cloud computing platform that will meet the needs of public
