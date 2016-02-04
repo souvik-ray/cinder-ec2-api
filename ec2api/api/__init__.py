@@ -198,19 +198,13 @@ class EC2KeystoneAuth(wsgi.Middleware):
 #        #params = dict(req.params)
 #            # Not part of authentication arg
 #       #params.pop('Signature', None)
-        token_id=req.params.get('TokenId')
-        user_id=req.params.get('UserId')
-        project_id=req.params.get('ProjectId')
-        if not token_id:
-            msg = _("TokenID not provided")
-            return faults.ec2_error_response(request_id, "AuthFailure", msg,
-                                             status=400)
-        if not user_id:
-            msg = _("UserID not provided")
-            return faults.ect2_error_response(request_id, "AuthFailure", msg,
-                                             status=400)
-        if not project_id:
-            msg = _("ProjectID not provided")
+
+        token_id = req.params.get('TokenId')
+        user_id = req.params.get('UserId')
+        project_id = req.params.get('ProjectId')
+
+        if (not token_id) or (not user_id) or (not project_id) :
+            msg = _("Missing Authorization Credentials.")
             return faults.ec2_error_response(request_id, "AuthFailure", msg,
                                              status=400)
 
@@ -233,26 +227,11 @@ class Requestify(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        non_args = ['Action', 'Signature', 'AWSAccessKeyId', 'SignatureMethod',
-                    'SignatureVersion', 'Version', 'Timestamp']
+        non_args = ['Action', 'ProjectId', 'UserId', 'TokenId']
         args = dict(req.params)
         try:
-            expired = ec2utils.is_ec2_timestamp_expired(
-                req.params,
-                expires=CONF.ec2_timestamp_expiry)
-            if expired:
-                msg = _("Timestamp failed validation.")
-                LOG.exception(msg)
-                raise webob.exc.HTTPForbidden(explanation=msg)
-
             # Raise KeyError if omitted
             action = req.params['Action']
-            # Fix bug lp:720157 for older (version 1) clients
-            version = req.params.get('SignatureVersion')
-            if version and int(version) == 1:
-                non_args.remove('SignatureMethod')
-                if 'SignatureMethod' in args:
-                    args.pop('SignatureMethod')
             for non_arg in non_args:
                 args.pop(non_arg, None)
         except KeyError:
