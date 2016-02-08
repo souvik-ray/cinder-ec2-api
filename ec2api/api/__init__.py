@@ -227,7 +227,7 @@ class Requestify(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        non_args = ['Action', 'ProjectId', 'UserId', 'TokenId','Version']
+        non_args = ['Action', 'ProjectId', 'UserId', 'TokenId']
         args = dict(req.params)
         try:
             # Raise KeyError if omitted
@@ -246,7 +246,7 @@ class Requestify(wsgi.Middleware):
 
         # Success!
         api_request = apirequest.APIRequest(
-            action, req.params['Version'], args)
+            action, None, args)
         req.environ['ec2.request'] = api_request
         return self.application
 
