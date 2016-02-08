@@ -161,9 +161,11 @@ def _url_for(context, **kwargs):
     service_catalog = context.service_catalog
     if not service_catalog:
         catalog = keystone(context).service_catalog.catalog
-        if 'serviceCatalog' in catalog:
+        #if 'serviceCatalog' in catalog:
+        if catalog.has_key('serviceCatalog'):
            service_catalog = catalog['serviceCatalog']
-        if 'catalog' in catalog:
+        #if 'catalog' in catalog:
+        elif catalog.has_key('catalog'):
            service_catalog = catalog['catalog']
         service_catalog = catalog['serviceCatalog']
         context.service_catalog = service_catalog
