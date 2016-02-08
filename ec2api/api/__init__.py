@@ -227,7 +227,7 @@ class Requestify(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        non_args = ['Action', 'ProjectId', 'UserId', 'TokenId']
+        non_args = ['Action', 'ProjectId', 'UserId', 'TokenId','Version']
         args = dict(req.params)
         try:
             # Raise KeyError if omitted
