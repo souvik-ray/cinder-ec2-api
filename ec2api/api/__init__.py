@@ -246,7 +246,7 @@ class Requestify(wsgi.Middleware):
 
         # Success!
         api_request = apirequest.APIRequest(
-            action, req.params['Version'], args)
+            action, None, args)
         req.environ['ec2.request'] = api_request
         return self.application
 
