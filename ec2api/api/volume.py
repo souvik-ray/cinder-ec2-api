@@ -101,7 +101,7 @@ class VolumeDescriber(object):
 
     def get_os_items(self, ids, max_results, next_token, detail):
         if ids is None :
-            return clients.cinder(self.context).volumes.list(marker=next_token, limit=max_results, detailed=true)
+            return clients.cinder(self.context).volumes.list(marker=next_token, limit=max_results, detailed=True)
         else :
             return [clients.cinder(self.context).volumes.get(ids)]
 
