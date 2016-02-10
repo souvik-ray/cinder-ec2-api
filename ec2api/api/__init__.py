@@ -173,7 +173,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        request_id = context.generate_request_id()
+        #request_id = context.generate_request_id()
 
         # NOTE(alevine) We need to calculate the hash here because
         # subsequent access to request modifies the req.body so the hash
@@ -202,6 +202,9 @@ class EC2KeystoneAuth(wsgi.Middleware):
         token_id = req.params.get('TokenId')
         user_id = req.params.get('UserId')
         project_id = req.params.get('ProjectId')
+        request_id = req.params.get('RequestId')
+        if not request_id:
+            request_id = context.generate_request_id()
 
         if (not token_id) or (not user_id) or (not project_id) :
             msg = _("Missing Authorization Credentials.")
@@ -210,6 +213,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
 
         ctxt = context.RequestContext(user_id, 
                                       project_id,
+                                      request_id=request_id,
                                       #user_name=user_name_local,
                                       #project_name=project_name_local,
                                       #roles=roles_local,
@@ -227,17 +231,26 @@ class Requestify(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        non_args = ['Action', 'ProjectId', 'UserId', 'TokenId']
+        non_args = ['Action', 'ProjectId', 'UserId', 'TokenId', 'RequestId']
         args = dict(req.params)
+        request_id = req.environ['ec2api.context'].request_id
         try:
             # Raise KeyError if omitted
             action = req.params['Action']
             for non_arg in non_args:
                 args.pop(non_arg, None)
-        except KeyError:
-            raise webob.exc.HTTPBadRequest()
+        except KeyError as k:
+            msg = ('An internal error has occured. Please contact '
+                   'customer support.')
+            LOG.exception(str(k))
+            return faults.ec2_error_response(request_id, "InternalError",
+                                             msg, status=500)
+            #raise webob.exc.HTTPBadRequest()
         except exception.InvalidRequest as err:
-            raise webob.exc.HTTPBadRequest(explanation=unicode(err))
+            LOG.exception(str(err))
+            return faults.ec2_error_response(request_id, "BadRequest",
+                                             str(err), status=400)
+            #raise webob.exc.HTTPBadRequest(explanation=unicode(err))
 
         LOG.debug('action: %s', action)
         for key, value in args.items():
