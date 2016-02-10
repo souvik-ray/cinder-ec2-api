@@ -58,7 +58,7 @@ class RequestContext(object):
 
     """
 
-    def __init__(self, user_id, project_id,
+    def __init__(self, user_id, project_id, request_id=None,
                  is_admin=None, roles=None, remote_address=None,
                  auth_token=None, user_name=None, project_name=None,
                  overwrite=True, service_catalog=None, api_version=None,
@@ -85,7 +85,9 @@ class RequestContext(object):
         if isinstance(timestamp, six.string_types):
             timestamp = timeutils.parse_strtime(timestamp)
         self.timestamp = timestamp
-        self.request_id = generate_request_id()
+        self.request_id = request_id
+        if self.request_id is None:
+            self.request_id = generate_request_id()
         self.auth_token = auth_token
 
         self.service_catalog = service_catalog
