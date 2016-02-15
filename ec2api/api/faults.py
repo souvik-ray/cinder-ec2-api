@@ -52,15 +52,14 @@ def ec2_error_response(request_id, code, message, status=500):
               {'code': code, 'message': message})
     resp = webob.Response()
     resp.status = status
-    resp.headers['Content-Type'] = 'application/json'
-    resp.body = str(utf8(message))
-    #resp.body = str('<?xml version="1.0"?>\n'
-    #                '<Response><Errors><Error><Code>%s</Code>'
-    #                '<Message>%s</Message></Error></Errors>'
-    #                '<RequestID>%s</RequestID></Response>' %
-    #                (xhtml_escape(utf8(code)),
-    #                 xhtml_escape(utf8(message)),
-    #                 xhtml_escape(utf8(request_id))))
+    resp.headers['Content-Type'] = 'text/xml'
+    resp.body = str('<?xml version="1.0"?>\n'
+                    '<Response><Errors><Error><Code>%s</Code>'
+                    '<Message>%s</Message></Error></Errors>'
+                    '<RequestID>%s</RequestID></Response>' %
+                    (xhtml_escape(utf8(code)),
+                     xhtml_escape(utf8(message)),
+                     xhtml_escape(utf8(request_id))))
     return resp
 
 
