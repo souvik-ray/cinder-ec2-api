@@ -20,7 +20,7 @@ from ec2api.api import ec2utils
 from ec2api.db import api as db_api
 from ec2api import exception
 from ec2api.i18n import _
-
+import re
 
 """Snapshot related API implementation
 """
@@ -81,7 +81,19 @@ class SnapshotDescriber(object):
 
     def get_os_items(self, ids, max_results, next_token, detail):
         if ids is None :
-            return clients.cinder(self.context).backups.list(marker=next_token, limit=max_results, detailed=True)
+            listofsnap=clients.cinder(self.context).backups.list(marker=next_token, limit=max_results, detailed=True)
+            listnew =[]
+            for os_item in listofsnap:
+                name=os_item.name
+                if name :
+                    pattern = re.compile("^volume-(.*)backup.base")
+                    if pattern.match(name): 
+                         listnew.append(os_item)
+                        
+            for os_item in listnew:
+                listofsnap.remove(os_item)
+            return listofsnap
+            #return clients.cinder(self.context).backups.list(marker=next_token, limit=max_results, detailed=True)
         else :
             return [clients.cinder(self.context).backups.get(ids)]
 
