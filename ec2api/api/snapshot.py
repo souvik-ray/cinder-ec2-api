@@ -66,11 +66,14 @@ class SnapshotDescriber(object):
         self.context = context
         os_items = self.get_os_items(ids, max_results, next_token, detail)
         formatted_items = []
-
+        
         for os_item in os_items:
-            formatted_item = self.format(os_item, detail)
-            if formatted_item:
-                formatted_items.append(formatted_item)
+            name=os_item.name
+            pattern = re.compile("^volume-(.*)backup.base")
+            if pattern.match(name) is None:
+                 formatted_item = self.format(os_item, detail)
+                 if formatted_item:
+                      formatted_items.append(formatted_item)
         return formatted_items
 
     def format(self, os_snapshot, detail):
@@ -81,19 +84,7 @@ class SnapshotDescriber(object):
 
     def get_os_items(self, ids, max_results, next_token, detail):
         if ids is None :
-            listofsnap=clients.cinder(self.context).backups.list(marker=next_token, limit=max_results, detailed=True)
-            listnew =[]
-            for os_item in listofsnap:
-                name=os_item.name
-                if name :
-                    pattern = re.compile("^volume-(.*)backup.base")
-                    if pattern.match(name): 
-                         listnew.append(os_item)
-                        
-            for os_item in listnew:
-                listofsnap.remove(os_item)
-            return listofsnap
-            #return clients.cinder(self.context).backups.list(marker=next_token, limit=max_results, detailed=True)
+            return clients.cinder(self.context).backups.list(marker=next_token, limit=max_results, detailed=True)
         else :
             return [clients.cinder(self.context).backups.get(ids)]
 
