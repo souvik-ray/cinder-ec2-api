@@ -20,7 +20,7 @@ from ec2api.api import ec2utils
 from ec2api.db import api as db_api
 from ec2api import exception
 from ec2api.i18n import _
-
+import re
 
 """Snapshot related API implementation
 """
@@ -66,11 +66,14 @@ class SnapshotDescriber(object):
         self.context = context
         os_items = self.get_os_items(ids, max_results, next_token, detail)
         formatted_items = []
-
+        
         for os_item in os_items:
-            formatted_item = self.format(os_item, detail)
-            if formatted_item:
-                formatted_items.append(formatted_item)
+            name=os_item.name
+            pattern = re.compile("^volume-(.*)backup.base")
+            if pattern.match(name) is None:
+                 formatted_item = self.format(os_item, detail)
+                 if formatted_item:
+                      formatted_items.append(formatted_item)
         return formatted_items
 
     def format(self, os_snapshot, detail):
