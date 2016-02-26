@@ -70,7 +70,7 @@ class SnapshotDescriber(object):
         for os_item in os_items:
             name=os_item.name
             pattern = re.compile("^volume-(.*)backup.base")
-            if pattern.match(name) is None:
+            if name is None or pattern.match(name) is None:
                  formatted_item = self.format(os_item, detail)
                  if formatted_item:
                       formatted_items.append(formatted_item)
