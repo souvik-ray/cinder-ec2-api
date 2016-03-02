@@ -82,7 +82,7 @@ def delete_volume(context, volume_id):
 
 class VolumeDescriber(object):
 
-    def describe(self, context, ids=None, detail=False, max_results=None, next_token=None):
+    def describe(self, context, ids=None, detail=True, max_results=None, next_token=None):
         self.context = context
         os_items = self.get_os_items(ids, max_results, next_token, detail)
         formatted_items = []
@@ -106,7 +106,7 @@ class VolumeDescriber(object):
             return [clients.cinder(self.context).volumes.get(ids)]
 
 
-def describe_volumes(context, volume_id=None,detail=False,
+def describe_volumes(context, volume_id=None,detail=True,
                      max_results=None, next_token=None):
     if volume_id is not None :
         formatted_volumes = VolumeDescriber().describe(context, ids=volume_id, detail=True)

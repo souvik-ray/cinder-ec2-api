@@ -62,7 +62,7 @@ def delete_snapshot(context, snapshot_id):
 
 class SnapshotDescriber(object):
 
-    def describe(self, context, ids=None, detail=False, max_results=None, next_token=None):
+    def describe(self, context, ids=None, detail=True, max_results=None, next_token=None):
         self.context = context
         os_items = self.get_os_items(ids, max_results, next_token, detail)
         formatted_items = []
@@ -90,7 +90,7 @@ class SnapshotDescriber(object):
 
 
 
-def describe_snapshots(context, snapshot_id=None, detail=False,
+def describe_snapshots(context, snapshot_id=None, detail=True,
                        max_results=None, next_token=None):
     if snapshot_id is not None:
         formatted_snapshots = SnapshotDescriber().describe(context, ids=snapshot_id, detail=True)
