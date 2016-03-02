@@ -82,7 +82,7 @@ def delete_volume(context, volume_id):
 
 class VolumeDescriber(object):
 
-    def describe(self, context, ids=None, detail=False, max_results=None, next_token=None):
+    def describe(self, context, ids=None, detail=True, max_results=None, next_token=None):
         self.context = context
         os_items = self.get_os_items(ids, max_results, next_token, detail)
         formatted_items = []
@@ -106,7 +106,7 @@ class VolumeDescriber(object):
             return [clients.cinder(self.context).volumes.get(ids)]
 
 
-def describe_volumes(context, volume_id=None,detail=False,
+def describe_volumes(context, volume_id=None,detail=True,
                      max_results=None, next_token=None):
     if volume_id is not None :
         formatted_volumes = VolumeDescriber().describe(context, ids=volume_id, detail=True)
@@ -132,10 +132,9 @@ def _format_volume_no_detail(context, os_volume):
         'error_extending' : 'creating' }
 
     ec2_volume = {
+            #'name': os_volume.name,
             'volumeId': os_volume.id,
-            'status': valid_ec2_api_volume_status_map.get(os_volume.status,
-                                                          os_volume.status),
-            'name': os_volume.name,
+            'status': valid_ec2_api_volume_status_map.get(os_volume.status, os_volume.status)
     }
 
     return ec2_volume
@@ -156,8 +155,8 @@ def _format_volume(context, os_volume):
         'error_extending' : 'creating' }
 
     ec2_volume = {
-            'name': os_volume.name,
-            'description': os_volume.description,
+            #'name': os_volume.name,
+            #'description': os_volume.description,
             'snapshotId': os_volume.snapshot_id,
             'size': os_volume.size,
             'status': valid_ec2_api_volume_status_map.get(os_volume.status,

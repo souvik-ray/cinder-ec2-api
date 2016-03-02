@@ -62,7 +62,7 @@ def delete_snapshot(context, snapshot_id):
 
 class SnapshotDescriber(object):
 
-    def describe(self, context, ids=None, detail=False, max_results=None, next_token=None):
+    def describe(self, context, ids=None, detail=True, max_results=None, next_token=None):
         self.context = context
         os_items = self.get_os_items(ids, max_results, next_token, detail)
         formatted_items = []
@@ -90,7 +90,7 @@ class SnapshotDescriber(object):
 
 
 
-def describe_snapshots(context, snapshot_id=None, detail=False,
+def describe_snapshots(context, snapshot_id=None, detail=True,
                        max_results=None, next_token=None):
     if snapshot_id is not None:
         formatted_snapshots = SnapshotDescriber().describe(context, ids=snapshot_id, detail=True)
@@ -112,7 +112,7 @@ def _format_snapshot_no_detail(context, os_snapshot):
         return None
     
     return {
-            'name': os_snapshot.name,
+            #'name': os_snapshot.name,
             'snapshotId': os_snapshot.id,
             'volumeId': os_snapshot.volume_id,
             'status': mapped_status}
@@ -133,8 +133,8 @@ def _format_snapshot(context, os_snapshot):
         return None
 
     return {
-            'name': os_snapshot.name,
-            'description': os_snapshot.description,
+            #'name': os_snapshot.name,
+            #'description': os_snapshot.description,
             'snapshotId': os_snapshot.id,
             'volumeId': os_snapshot.volume_id,
             'volumeSize': os_snapshot.size,
