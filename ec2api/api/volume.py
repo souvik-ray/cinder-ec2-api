@@ -148,8 +148,8 @@ def _format_volume(context, os_volume):
         'deleting':'deleting',
         'error':'creating',
         'error_deleting':'deleting',
-        'backing-up-available': 'available',
-        'backing-up-in-use': 'in-use',
+        'backing-up-available': 'backing-up',
+        'backing-up-in-use': 'backing-up',
         'restoring-backup': 'creating',
         'error_restoring':'creating',
         'error_extending' : 'creating' }
