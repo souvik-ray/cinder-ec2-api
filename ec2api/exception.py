@@ -186,7 +186,7 @@ class AuthFailure(EC2InvalidException):
 
 class ValidationError(EC2InvalidException):
     msg_fmt = _("The input fails to satisfy the constraints "
-                "specified by an AWS service: '%(reason)s'")
+                "specified by JCS service: '%(reason)s'")
 
 
 class MissingParameter(EC2InvalidException):
