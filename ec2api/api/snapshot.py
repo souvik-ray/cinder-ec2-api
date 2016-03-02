@@ -112,7 +112,7 @@ def _format_snapshot_no_detail(context, os_snapshot):
         return None
     
     return {
-            'name': os_snapshot.name,
+            #'name': os_snapshot.name,
             'snapshotId': os_snapshot.id,
             'volumeId': os_snapshot.volume_id,
             'status': mapped_status}
@@ -133,8 +133,8 @@ def _format_snapshot(context, os_snapshot):
         return None
 
     return {
-            'name': os_snapshot.name,
-            'description': os_snapshot.description,
+            #'name': os_snapshot.name,
+            #'description': os_snapshot.description,
             'snapshotId': os_snapshot.id,
             'volumeId': os_snapshot.volume_id,
             'volumeSize': os_snapshot.size,
