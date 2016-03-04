@@ -21,6 +21,12 @@ from ec2api.db import api as db_api
 from ec2api import exception
 from ec2api.i18n import _
 import re
+import base64
+import collections
+import fnmatch
+import inspect
+import operator
+
 
 """Snapshot related API implementation
 """
@@ -89,6 +95,29 @@ class SnapshotDescriber(object):
             return [clients.cinder(self.context).backups.get(ids)]
 
 
+def get_paged(self, formatted_items, max_results, next_token):
+        SORT_KEY = 'snapshotId'
+        if not max_results and not next_token:
+            return formatted_items
+
+        if max_results and max_results > 1000:
+            max_results = 1000
+        formatted_items = sorted(formatted_items,
+                                 key=operator.itemgetter(SORT_KEY))
+        
+        next_item = 0 
+        if next_token:
+           for i, elem in enumerate(formatted_items):
+              if next_token == elem[SORT_KEY]:
+                 next_item = i+1
+        if next_item:
+            formatted_items = formatted_items[next_item:]
+        if max_results and max_results < len(formatted_items):
+            next_token = base64.b64encode(str(next_item + max_results))
+            formatted_items = formatted_items[:max_results]
+        
+        return formatted_items
+
 
 def describe_snapshots(context, snapshot_id=None, detail=False,
                        max_results=None, next_token=None):
@@ -96,7 +125,8 @@ def describe_snapshots(context, snapshot_id=None, detail=False,
         formatted_snapshots = SnapshotDescriber().describe(context, ids=snapshot_id, detail=True)
     else :
         formatted_snapshots = SnapshotDescriber().describe(
-           context, detail=detail, max_results=max_results, next_token=next_token)
+           context, detail=detail, max_results=None, next_token=None)
+    formatted_snapshots=get_paged(context,formatted_snapshots,max_results,next_token)
     return {'snapshotSet': formatted_snapshots}
 
 def _format_snapshot_no_detail(context, os_snapshot):
