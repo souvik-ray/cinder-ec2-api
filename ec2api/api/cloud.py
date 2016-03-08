@@ -45,6 +45,8 @@ from ec2api import exception
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
+def _underscore_to_camelcase(st):
+    return ''.join([x[:1].upper() + x[1:] for x in st.split('_')])
 
 def module_and_param_types(module, *args, **kwargs):
     """Decorator to check types and call function."""
@@ -70,7 +72,7 @@ def module_and_param_types(module, *args, **kwargs):
                     validation_func(param_value)
                     param_num += 1
                 elif param_num < mandatory_params_num:
-                    raise exception.MissingParameter(param=param_name)
+                    raise exception.MissingParameter(param=_underscore_to_camelcase(param_name))
             return impl_func(context, **kwargs)
         return func_wrapped
 
