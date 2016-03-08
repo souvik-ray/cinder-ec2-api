@@ -110,10 +110,12 @@ def get_paged(self, formatted_items, max_results, next_token):
            for i, elem in enumerate(formatted_items):
               if next_token == elem[SORT_KEY]:
                  next_item = i+1
+           if next_item == 0 :
+              raise exception.InvalidSnapshotNotFound(id=next_token) 
         if next_item:
             formatted_items = formatted_items[next_item:]
         if max_results and max_results < len(formatted_items):
-            next_token = base64.b64encode(str(next_item + max_results))
+           #next_token = base64.b64encode(str(next_item + max_results))
             formatted_items = formatted_items[:max_results]
         
         return formatted_items
