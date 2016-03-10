@@ -169,6 +169,6 @@ def _format_snapshot(context, os_snapshot):
             'description': os_snapshot.description,
             'snapshotId': os_snapshot.id,
             'volumeId': os_snapshot.volume_id,
-            'snapshotSize': os_snapshot.size,
+            'volumeSize': os_snapshot.size,
             'status': mapped_status,
             'startTime': os_snapshot.created_at}
