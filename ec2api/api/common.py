@@ -231,13 +231,19 @@ class Validator(object):
         self.ec2_id(id, ['snap'])
 
     def snap_ids(self, ids):
-        self.multi(ids, self.snap_id)
+        if isinstance(ids, list) :
+            self.strs(ids)
+        else :
+            self.str(ids)
 
     def vol_id(self, id):
         self.ec2_id(id, ['vol'])
 
     def vol_ids(self, ids):
-        self.multi(ids, self.vol_id)
+        if isinstance(ids, list) :
+            self.strs(ids)
+        else :
+            self.str(ids)
 
     def dopt_id(self, id):
         self.ec2_id(id, ['dopt'])

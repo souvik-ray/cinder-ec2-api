@@ -87,10 +87,19 @@ class VolumeDescriber(object):
         os_items = self.get_os_items(ids, max_results, next_token, detail)
         formatted_items = []
 
-        for os_item in os_items:
-            formatted_item = self.format(os_item, detail)
-            if formatted_item:
-                formatted_items.append(formatted_item)
+        if ((ids is not None) and isinstance(ids, list)) :
+            self.ids = set(ids or [])
+            for os_item in os_items:
+                if (os_item.id not in self.ids) : 
+                    continue;
+                formatted_item = self.format(os_item, detail)
+                if formatted_item:
+                    formatted_items.append(formatted_item)
+        else :
+            for os_item in os_items:
+                formatted_item = self.format(os_item, detail)
+                if formatted_item:
+                    formatted_items.append(formatted_item)
         return formatted_items
 
     def format(self, os_volume, detail):
@@ -102,6 +111,8 @@ class VolumeDescriber(object):
     def get_os_items(self, ids, max_results, next_token, detail):
         if ids is None :
             return clients.cinder(self.context).volumes.list(marker=next_token, limit=max_results, detailed=True)
+        elif isinstance(ids, list) :
+            return clients.cinder(self.context).volumes.list(detailed=True)
         else :
             return [clients.cinder(self.context).volumes.get(ids)]
 
