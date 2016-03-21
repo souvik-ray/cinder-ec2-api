@@ -157,7 +157,8 @@ def _format_volume(context, os_volume):
     ec2_volume = {
             #'name': os_volume.name,
             #'description': os_volume.description,
-            'snapshotId': os_volume.snapshot_id,
+            # Refer,  https://github.com/JioCloud/cinder/blob/kilo_sbs/cinder/backup/api.py#L313
+            'snapshotId': os_volume.backup_id,
             'size': os_volume.size,
             'status': valid_ec2_api_volume_status_map.get(os_volume.status,
                                                           os_volume.status),
