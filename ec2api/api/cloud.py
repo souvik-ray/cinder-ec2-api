@@ -808,7 +808,7 @@ class CloudController(object):
         The volume must be in the available state.
         """
 
-    @module_and_param_types(volume, 'str', 'bool',
+    @module_and_param_types(volume, 'vol_ids', 'bool',
                             'int', 'str')
     def describe_volumes(self, context, volume_id=None,detail=False,
                          max_results=None, next_token=None):
@@ -853,7 +853,7 @@ class CloudController(object):
             Returns true if the request succeeds.
         """
 
-    @module_and_param_types(snapshot, 'str','bool','int','str')
+    @module_and_param_types(snapshot, 'snap_ids','bool','int','str')
     def describe_snapshots(self, context, snapshot_id=None,detail=False,
                            max_results=None, next_token=None):
         """Describes one or more of the snapshots available to you.
