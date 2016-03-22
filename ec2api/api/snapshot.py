@@ -114,8 +114,6 @@ def get_paged(self, formatted_items, max_results, next_token):
         if not max_results and not next_token:
             return formatted_items
 
-        if max_results and max_results > 1000:
-            max_results = 1000
         formatted_items = sorted(formatted_items,
                                  key=operator.itemgetter(SORT_KEY))
         
