@@ -21,13 +21,11 @@ from ec2api.api import ec2utils
 from ec2api.db import api as db_api
 from ec2api import exception
 from ec2api.i18n import _
-from oslo_log import log as logging
 
 
 """Volume related API implementation
 """
 
-LOG = logging.getLogger(__name__)
 
 Validator = common.Validator
 
@@ -51,8 +49,6 @@ def create_volume(context, size=None, snapshot_id=None,
             os_volume_temp = cinder.restores.restore(backup_id=snapshot_id,name=name,description=description)
             os_volume=cinder.volumes.get(os_volume_temp.volume_id)
             cleaner.addCleanup(os_volume.delete)
-            #if (os_volume.snapshot_id is None):
-            #    os_volume.snapshot_id = snapshot_id
             return _format_volume(context, os_volume)
 
     # Coming here implies size is not None.
@@ -66,8 +62,6 @@ def create_volume(context, size=None, snapshot_id=None,
         os_volume_temp = cinder.restores.restore(backup_id=snapshot_id, volume_size=size,name=name,description=description)
         os_volume=cinder.volumes.get(os_volume_temp.volume_id)
         cleaner.addCleanup(os_volume.delete)
-        #if (os_volume.snapshot_id is None):
-        #    os_volume.snapshot_id = snapshot_id
         return _format_volume(context, os_volume)
 
 
