@@ -65,6 +65,7 @@ _novaclient_vertion = '2.3'
 _nova_service_type = 'computev21'
 
 
+
 def nova(context):
     args = {
         'auth_url': CONF.keystone_url,
