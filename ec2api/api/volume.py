@@ -166,8 +166,13 @@ def _format_volume(context, os_volume):
         'error_extending' : 'creating' }
 
     snapshotId = None
-    if hasattr(os_volume, 'backup_id'):
-        snapshotId = os_volume.backup_id
+    try:
+        # Do not show snapshot id for bootable volumes
+        if not os_volume.bootable:
+            snapshotId = os_volume.snapshot_id
+    except AttributeError:
+       pass
+
 
     ec2_volume = {
             #'name': os_volume.name,
