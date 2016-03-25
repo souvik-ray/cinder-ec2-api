@@ -168,7 +168,7 @@ def _format_volume(context, os_volume):
     snapshotId = None
     try:
         # Do not show snapshot id for bootable volumes
-        if not os_volume.bootable:
+        if os_volume.bootable == 'false':
             snapshotId = os_volume.snapshot_id
     except AttributeError:
        pass
