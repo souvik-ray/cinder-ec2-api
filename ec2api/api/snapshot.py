@@ -57,13 +57,17 @@ def create_snapshot(context, volume_id, description=None, name=None):
 def delete_snapshot(context, snapshot_id):
     cinder = clients.cinder(context)
     try:
+         os_snapshot=cinder.backups.get(snapshot_id)
+         if os_snapshot.status=="deleting" or os_snapshot.status=="deleted" :
+               raise exception.InvalidSnapshotNotFound(id=snapshot_id)
+    except cinder_exception.NotFound:
+        raise exception.InvalidSnapshotNotFound(id=snapshot_id)
+
+    try:
         cinder.backups.delete(snapshot_id)
     except cinder_exception.NotFound:
         raise exception.InvalidSnapshotNotFound(id=snapshot_id)
-    except cinder_exception.BadRequest:
-        os_snapshot=cinder.backups.get(snapshot_id)
-        if os_snapshot.status=="deleting" or os_snapshot.status=="deleted" :
-               raise exception.InvalidSnapshotNotFound(id=snapshot_id)
+
     # NOTE(andrey-mp) Don't delete item from DB until it disappears from Cloud
     # It will be deleted by describer in the future
     return True
@@ -117,7 +121,10 @@ class SnapshotDescriber(object):
         elif isinstance(ids, list) :
             return clients.cinder(self.context).backups.list(detailed=True)
         else :
-            return [clients.cinder(self.context).backups.get(ids)]
+          try:
+               return [clients.cinder(self.context).backups.get(ids)]
+           except cinder_exception.NotFound:
+               raise exception.InvalidSnapshotNotFound(id=ids)
 
 
 def get_paged(self, formatted_items, max_results, next_token):
