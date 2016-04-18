@@ -37,7 +37,10 @@ Validator = common.Validator
 
 def create_snapshot(context, volume_id, description=None, name=None):
     cinder = clients.cinder(context)
-    os_volume = cinder.volumes.get(volume_id)
+    try:
+        os_volume = cinder.volumes.get(volume_id)
+    except cinder_exception.NotFound:
+        raise exception.InvalidVolumeNotFound(id=volume_id)
     # NOTE(ft): Easy fix to allow snapshot creation in statuses other than
     # AVAILABLE without cinder modifications. Potential race condition
     # though. Seems arguably non-fatal.

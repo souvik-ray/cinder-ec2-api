@@ -33,8 +33,8 @@ Validator = common.Validator
 def create_volume(context, size=None, snapshot_id=None,
                   name=None, description=None):
     if size is None and snapshot_id is None :
-        msg = _('Parameter Size has not been specified.')
-        raise exception.InvalidInput(reason=msg)
+        msg = _('Parameter Size or SnapshotId has not been specified.')
+        raise exception.MissingParameter(reason=msg)
 
     cinder = clients.cinder(context)
     if snapshot_id is None :
@@ -46,7 +46,10 @@ def create_volume(context, size=None, snapshot_id=None,
     # Coming Here implies SnapshotId is not None.
     if size is None :
         with common.OnCrashCleaner() as cleaner:
-            os_volume_temp = cinder.restores.restore(backup_id=snapshot_id,name=name,description=description)
+            try:
+                   os_volume_temp = cinder.restores.restore(backup_id=snapshot_id,name=name,description=description)
+            except cinder_exception.NotFound:
+                   raise exception.InvalidSnapshotNotFound(id=snapshot_id)
             os_volume=cinder.volumes.get(os_volume_temp.volume_id)
             cleaner.addCleanup(os_volume.delete)
             return _format_volume(context, os_volume)
@@ -73,8 +76,7 @@ def delete_volume(context, volume_id):
         # TODO(andrey-mp): raise correct errors for different cases
         raise exception.UnsupportedOperation()
     except cinder_exception.NotFound:
-        msg = _('Requested volume not found')
-        raise exception.InvalidInput(reason=msg)
+        raise exception.InvalidVolumeNotFound(id=volume_id)
     # NOTE(andrey-mp) Don't delete item from DB until it disappears from Cloud
     # It will be deleted by describer in the future
     return True
@@ -95,6 +97,10 @@ class VolumeDescriber(object):
                 formatted_item = self.format(os_item, detail)
                 if formatted_item:
                     formatted_items.append(formatted_item)
+	    list_count=len(formatted_items)
+	    set_count=len(self.ids)
+	    if list_count!=set_count :
+        	raise exception.InvalidVolumeNotFound()
         else :
             for os_item in os_items:
                 formatted_item = self.format(os_item, detail)
@@ -114,7 +120,10 @@ class VolumeDescriber(object):
         elif isinstance(ids, list) :
             return clients.cinder(self.context).volumes.list(detailed=True)
         else :
-            return [clients.cinder(self.context).volumes.get(ids)]
+	    try:
+            	return [clients.cinder(self.context).volumes.get(ids)]
+            except cinder_exception.NotFound:
+        	raise exception.InvalidVolumeNotFound(id=ids)
 
 
 def describe_volumes(context, volume_id=None,detail=True,
