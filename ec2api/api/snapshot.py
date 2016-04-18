@@ -130,7 +130,7 @@ class SnapshotDescriber(object):
         else :
           try:
                return [clients.cinder(self.context).backups.get(ids)]
-           except cinder_exception.NotFound:
+          except cinder_exception.NotFound:
                raise exception.InvalidSnapshotNotFound(id=ids)
 
 
