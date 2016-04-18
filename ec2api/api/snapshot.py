@@ -57,10 +57,17 @@ def create_snapshot(context, volume_id, description=None, name=None):
 def delete_snapshot(context, snapshot_id):
     cinder = clients.cinder(context)
     try:
+         os_snapshot=cinder.backups.get(snapshot_id)
+         if os_snapshot.status=="deleting" or os_snapshot.status=="deleted" :
+               raise exception.InvalidSnapshotNotFound(id=snapshot_id)
+    except cinder_exception.NotFound:
+        raise exception.InvalidSnapshotNotFound(id=snapshot_id)
+
+    try:
         cinder.backups.delete(snapshot_id)
     except cinder_exception.NotFound:
-        pass
-    os_snapshot=cinder.backups.get(snapshot_id)
+        raise exception.InvalidSnapshotNotFound(id=snapshot_id)
+
     # NOTE(andrey-mp) Don't delete item from DB until it disappears from Cloud
     # It will be deleted by describer in the future
     return True
@@ -73,17 +80,29 @@ class SnapshotDescriber(object):
         os_items = self.get_os_items(ids, max_results, next_token, detail)
         formatted_items = []
         
-        if ((ids is not None) and isinstance(ids, list)) :
+	if ((ids is not None) and not isinstance(ids, list)):
+            for os_item in os_items:
+                   if os_item.status=="deleting" or os_item.status=="deleted" :
+                       raise exception.InvalidSnapshotNotFound(id=os_item.id)
+
+        if ((ids is not None) and isinstance(ids, list)):
             self.ids = set(ids or [])
             for os_item in os_items:
                 if (os_item.id not in self.ids) : 
                     continue;
+
+                if os_item.status=="deleting" or os_item.status=="deleted" :
+                    raise exception.InvalidSnapshotNotFound(id=os_item.id)
                 name=os_item.name
                 pattern = re.compile("^volume-(.*)backup.base")
                 if name is None or pattern.match(name) is None:
                     formatted_item = self.format(os_item, detail)
                     if formatted_item:
                         formatted_items.append(formatted_item)
+	    list_count=len(formatted_items)
+	    set_count=len(self.ids)
+	    if list_count!=set_count :
+                    raise exception.InvalidSnapshotNotFound()
         else :
             for os_item in os_items:
                 name=os_item.name
@@ -106,7 +125,10 @@ class SnapshotDescriber(object):
         elif isinstance(ids, list) :
             return clients.cinder(self.context).backups.list(detailed=True)
         else :
-            return [clients.cinder(self.context).backups.get(ids)]
+          try:
+               return [clients.cinder(self.context).backups.get(ids)]
+           except cinder_exception.NotFound:
+               raise exception.InvalidSnapshotNotFound(id=ids)
 
 
 def get_paged(self, formatted_items, max_results, next_token):
@@ -147,6 +169,7 @@ def _format_snapshot_no_detail(context, os_snapshot):
     status_map = {'creating': 'pending',
                   'available': 'completed',
                   'deleting': None,
+                  'deleted': None,
                   'restoring': 'completed',
                   'error_restoring': 'completed',
                   'error': 'error'}
@@ -168,6 +191,7 @@ def _format_snapshot(context, os_snapshot):
     status_map = {'creating': 'pending',
                   'available': 'completed',
                   'deleting': None,
+		  'deleted':None,
                   'restoring': 'completed',
                   'error_restoring': 'completed',
                   'error': 'error'}
