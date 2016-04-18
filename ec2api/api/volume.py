@@ -33,7 +33,7 @@ Validator = common.Validator
 def create_volume(context, size=None, snapshot_id=None,
                   name=None, description=None):
     if size is None and snapshot_id is None :
-        msg = _('Parameter Size or SnapshotId has not been specified.')
+        msg = _('Parameter Size has not been specified.')
         raise exception.MissingParameter(reason=msg)
 
     cinder = clients.cinder(context)
