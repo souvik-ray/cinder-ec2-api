@@ -87,6 +87,12 @@ class SnapshotDescriber(object):
 
         if ((ids is not None) and isinstance(ids, list)):
             self.ids = set(ids or [])
+	    idlist=[]
+            for os_item in os_items:
+		idlist.append(os_item.id)
+            for _id in self.ids:
+                if (_id not in idlist) : 
+                    raise exception.InvalidSnapshotNotFound(id=_id)
             for os_item in os_items:
                 if (os_item.id not in self.ids) : 
                     continue;
