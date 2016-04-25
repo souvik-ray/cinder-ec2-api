@@ -126,7 +126,11 @@ class SnapshotDescriber(object):
         if ids is None :
             return clients.cinder(self.context).backups.list(marker=next_token, limit=max_results, detailed=True)
         elif isinstance(ids, list) :
-            return clients.cinder(self.context).backups.list(detailed=True)
+	  count_id=len(ids)
+	  if count_id==1:  	
+               return [clients.cinder(self.context).backups.get(ids[0])]
+	  else :
+               return clients.cinder(self.context).backups.list(detailed=True)
         else :
           try:
                return [clients.cinder(self.context).backups.get(ids)]
