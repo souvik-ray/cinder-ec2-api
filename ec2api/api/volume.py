@@ -120,7 +120,10 @@ class VolumeDescriber(object):
         elif isinstance(ids, list) :
 	  count_id=len(ids)
 	  if count_id==1:  	
+	    try:
                return [clients.cinder(self.context).volumes.get(ids[0])]
+            except cinder_exception.NotFound:
+               raise exception.InvalidVolumeNotFound(id=ids[0])
 	  else :
                return clients.cinder(self.context).volumes.list(detailed=True)
         else :

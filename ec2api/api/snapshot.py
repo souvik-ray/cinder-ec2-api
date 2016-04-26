@@ -128,7 +128,10 @@ class SnapshotDescriber(object):
         elif isinstance(ids, list) :
 	  count_id=len(ids)
 	  if count_id==1:  	
+            try:
                return [clients.cinder(self.context).backups.get(ids[0])]
+            except cinder_exception.NotFound:
+               raise exception.InvalidSnapshotNotFound(id=ids[0])
 	  else :
                return clients.cinder(self.context).backups.list(detailed=True)
         else :
