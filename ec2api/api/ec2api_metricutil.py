@@ -1,4 +1,4 @@
-from metrics.metricutil import metricutil
+from metrics.metricutil import SyncFlowMetricsWrapper 
 # Wrapper for Cinder Volume
 class Ec2APIMetricsWrapper(SyncFlowMetricsWrapper):
     def __init__(self, operation_name):
