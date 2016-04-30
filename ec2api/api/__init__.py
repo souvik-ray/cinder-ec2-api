@@ -35,7 +35,7 @@ from ec2api import context
 from ec2api import exception
 from ec2api.i18n import _
 from ec2api import wsgi
-
+from ec2api_metricutil import Ec2APIMetricsWrapper
 
 LOG = logging.getLogger(__name__)
 
@@ -69,11 +69,12 @@ class FaultWrapper(wsgi.Middleware):
 
     """Calls the middleware stack, captures any exceptions into faults."""
 
+    @Ec2APIMetricsWrapper
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         try:
             return req.get_response(self.application)
-        except Exception:
+        except Exception as e:
             LOG.exception(_("FaultWrapper cathes error"))
             return faults.Fault(webob.exc.HTTPInternalServerError())
 
@@ -205,6 +206,10 @@ class EC2KeystoneAuth(wsgi.Middleware):
         request_id = req.params.get('RequestId')
         if not request_id:
             request_id = context.generate_request_id()
+        metrics.add_property("TenantId",  project_id)
+        metrics.add_property("RemoteAddress", request.remote_addr)
+        metrics.add_property("RequestId", request_id)
+        #metrics.add_property("PathInfo", path_info)
 
         if (not token_id) or (not user_id) or (not project_id) :
             msg = _("Missing Authorization Credentials.")
