@@ -35,7 +35,8 @@ from ec2api import context
 from ec2api import exception
 from ec2api.i18n import _
 from ec2api import wsgi
-from ec2api.api.metric_util import MetricUtil
+from metrics.metric_util import MetricUtil
+
 LOG = logging.getLogger(__name__)
 
 ec2_opts = [
@@ -85,7 +86,7 @@ class FaultWrapper(wsgi.Middleware):
             fault = 0
             error = 0
             try:
-                status = response.status
+                status = response.status_int
                 metrics.add_property("Status", status)
                 if status > 399 and status < 500:
                     error = 1
@@ -380,9 +381,6 @@ class Executor(wsgi.Application):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         context = req.environ['ec2api.context']
-        LOG.debug("Here")
-        LOG.debug(context)
-        LOG.debug(type(context))
         api_request = req.environ['ec2.request']
         try:
             result = api_request.invoke(context)
