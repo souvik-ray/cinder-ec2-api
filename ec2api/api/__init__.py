@@ -70,6 +70,8 @@ class FaultWrapper(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
+        # Could not use annotation for metrics here because req.get_response is not callable. This is the only way to
+        # add metrics so far. Till I find a better way
         metricUtil = MetricUtil()
         metrics = metricUtil.initialize_thread_local_metrics("/var/log/ec2api/service.log", "CinderEc2API")
         response = None
@@ -79,12 +81,24 @@ class FaultWrapper(wsgi.Middleware):
             LOG.exception(_("FaultWrapper catches error"))
             response = faults.Fault(webob.exc.HTTPInternalServerError())
         finally:
-                try:
-                    status = response.status
-                    metrics.add_property("status", status)
-                except AttributeError as e:
-                    LOG.exception(e)
-                metrics.close()
+            success = 0
+            fault = 0
+            error = 0
+            try:
+                status = response.status
+                metrics.add_property("Status", status)
+                if status > 399 and status <500:
+                    error = 1
+                elif status > 499:
+                    fault = 1
+                else:
+                    success = 1
+            except AttributeError as e:
+                LOG.exception(e)
+            metrics.add_count("fault", fault)
+            metrics.add_count("error", error)
+            metrics.add_count("success", success)
+            metrics.close()
         return response
 
 
@@ -366,6 +380,9 @@ class Executor(wsgi.Application):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         context = req.environ['ec2api.context']
+        LOG.debug("Here")
+        LOG.debug(context)
+        LOG.debug(api_request)
         api_request = req.environ['ec2.request']
         try:
             result = api_request.invoke(context)
