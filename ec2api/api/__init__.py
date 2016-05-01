@@ -71,7 +71,7 @@ class FaultWrapper(wsgi.Middleware):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         metricUtil = MetricUtil()
-        metrics = metricUtil.initialize_thread_local_metrics(req)
+        metrics = metricUtil.initialize_thread_local_metrics("/var/log/ec2api/service.log", "CinderEc2API")
         try:
             return req.get_response(self.application)
         except Exception as e:
@@ -80,7 +80,6 @@ class FaultWrapper(wsgi.Middleware):
         finally:
                 metrics.close()
 
-    def get_request_response(self, req):
 
 
 class RequestLogging(wsgi.Middleware):
@@ -214,7 +213,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
         metrics = MetricUtil().fetch_thread_local_metrics()
         metrics.add_property("ProjectId",  project_id)
         metrics.add_property("UserId",  user_id)
-        metrics.add_property("RemoteAddress", request.remote_addr)
+        metrics.add_property("RemoteAddress", req.remote_addr)
         metrics.add_property("RequestId", request_id)
         #metrics.add_property("PathInfo", path_info)
         metrics.add_property("OperationName", action)
