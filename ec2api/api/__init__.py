@@ -84,6 +84,8 @@ class FaultWrapper(wsgi.Middleware):
             success = 0
             fault = 0
             error = 0
+            LOG.debug(response)
+            LOG.debug(type(response))
             try:
                 status = response.status
                 metrics.add_property("Status", status)
@@ -382,8 +384,10 @@ class Executor(wsgi.Application):
         context = req.environ['ec2api.context']
         LOG.debug("Here")
         LOG.debug(context)
-        LOG.debug(api_request)
+        LOG.debug(type(context))
         api_request = req.environ['ec2.request']
+        LOG.debug(api_request)
+        LOG.debug(type(api_request))
         try:
             result = api_request.invoke(context)
         except Exception as ex:
