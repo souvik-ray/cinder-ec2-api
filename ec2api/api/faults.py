@@ -21,6 +21,7 @@ import webob.exc
 
 import ec2api.api
 from ec2api import context
+from ec2api.api.temp import MetricUtil
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -77,10 +78,13 @@ class Fault(webob.exc.HTTPException):
         code = ec2api.api.exception_to_ec2code(self.wrapped_exc)
         status = self.wrapped_exc.status_int
         message = self.wrapped_exc.explanation
-        metric_util = MetricUtil()
-        metric = metric_util.fetch_thread_local_metrics()
-        metrics.add_property("code", code)
-        metrics.add_property("status", status)
+        try:
+            metric_util = MetricUtil()
+            metric = metric_util.fetch_thread_local_metrics()
+            metrics.add_property("code", code)
+            metrics.add_property("status", status)
+        except Exception as e:
+            LOG.error("Exception", e)
         #TODO: think whether adding message makes a lot of sense here.
 
         if status == 501:
