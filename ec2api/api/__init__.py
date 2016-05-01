@@ -84,8 +84,6 @@ class FaultWrapper(wsgi.Middleware):
             success = 0
             fault = 0
             error = 0
-            LOG.debug(response)
-            LOG.debug(type(response))
             try:
                 status = response.status
                 metrics.add_property("Status", status)

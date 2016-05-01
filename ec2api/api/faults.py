@@ -61,6 +61,14 @@ def ec2_error_response(request_id, code, message, status=500):
                     (xhtml_escape(utf8(code)),
                      xhtml_escape(utf8(message)),
                      xhtml_escape(utf8(request_id))))
+    try:
+        metric_util = MetricUtil()
+        metric = metric_util.fetch_thread_local_metrics()
+        metrics.add_property("code", code)
+        metrics.add_count(code, 1)
+    except Exception as e:
+        LOG.error("Exception", e)
+    #TODO: think whether adding message makes a lot of sense here.
     return resp
 
 
