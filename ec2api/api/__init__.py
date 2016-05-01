@@ -89,7 +89,7 @@ class FaultWrapper(wsgi.Middleware):
             try:
                 status = response.status
                 metrics.add_property("Status", status)
-                if status > 399 and status <500:
+                if status > 399 and status < 500:
                     error = 1
                 elif status > 499:
                     fault = 1
@@ -386,8 +386,6 @@ class Executor(wsgi.Application):
         LOG.debug(context)
         LOG.debug(type(context))
         api_request = req.environ['ec2.request']
-        LOG.debug(api_request)
-        LOG.debug(type(api_request))
         try:
             result = api_request.invoke(context)
         except Exception as ex:

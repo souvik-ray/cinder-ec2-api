@@ -64,6 +64,9 @@ class APIRequest(object):
         try:
             method = getattr(self.controller,
                              ec2utils.camelcase_to_underscore(self.action))
+            LOG.info("method")
+            LOG.info(method)
+
         except AttributeError:
             LOG.exception(_('Unsupported API request: action = %(action)s'),
                           {'action': self.action})
