@@ -26,7 +26,7 @@ import collections
 import fnmatch
 import inspect
 import operator
-from metrics.metric_util import ReportLatency
+from metrics.metric_util import ReportMetrics
 
 
 """Snapshot related API implementation

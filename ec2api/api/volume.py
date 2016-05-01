@@ -21,7 +21,7 @@ from ec2api.api import ec2utils
 from ec2api.db import api as db_api
 from ec2api import exception
 from ec2api.i18n import _
-from metrics.metric_util import ReportLatency
+from metrics.metric_util import ReportMetrics
 
 """Volume related API implementation
 """
