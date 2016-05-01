@@ -72,13 +72,20 @@ class FaultWrapper(wsgi.Middleware):
     def __call__(self, req):
         metricUtil = MetricUtil()
         metrics = metricUtil.initialize_thread_local_metrics("/var/log/ec2api/service.log", "CinderEc2API")
+        response = None
         try:
-            return req.get_response(self.application)
+            response = req.get_response(self.application)
         except Exception as e:
-            LOG.exception(_("FaultWrapper cathes error"))
-            return faults.Fault(webob.exc.HTTPInternalServerError())
+            LOG.exception(_("FaultWrapper catches error"))
+            response = faults.Fault(webob.exc.HTTPInternalServerError())
         finally:
+                try:
+                    status = response.status
+                    metrics.add_property("status", status)
+                except AttributeError as e:
+                    LOG.exception(e)
                 metrics.close()
+        return response
 
 
 

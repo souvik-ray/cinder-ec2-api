@@ -82,7 +82,6 @@ class Fault(webob.exc.HTTPException):
             metric_util = MetricUtil()
             metric = metric_util.fetch_thread_local_metrics()
             metrics.add_property("code", code)
-            metrics.add_property("status", status)
         except Exception as e:
             LOG.error("Exception", e)
         #TODO: think whether adding message makes a lot of sense here.
