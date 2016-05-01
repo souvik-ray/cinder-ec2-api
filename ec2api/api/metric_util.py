@@ -46,46 +46,6 @@ class ReportMetrics(object):
 
         return metrics_wrapper
 
-# This creates a metrics wrapper for any method starting the method life cycle. It is recommended to put this at the
-# start of a request or async flow life cycle. This cane be used as decorator
-class MetricsWrapper(object):
-    '''
-    @program_name - This variable declares what sub component this is Cinder-API, cinder-volume etc
-    @operation_name - This is API or method name for the service. For example volume-create
-        '''
-    def __init__(self, program_name, service_log_path):
-        # Right now overriding service log path wont work
-        self.__program_name = program_name
-        self.__service_log_path =  service_log_path
-
-    def __call__(self, function):
-        def wrapped_function(*args, **kwargs):
-            metricUtil = MetricUtil()
-            metrics = metricUtil.initialize_thread_local_metrics(service_log_path, program_name)
-            success = 0
-            fault = 0
-            error = 0
-            try:
-                response = function(*args, **kwargs)
-                success = 1
-                return response
-            except Exception as e:
-                raise e
-            finally:
-                self._add_request_attributes_to_metrics(metrics, *args, **kwargs)
-                metrics.close()
-        return wrapped_function
-
-    def _add_request_attributes_to_metrics(self, metrics, *args, **kwargs):
-        pass
-
-# This class is used a as async metrics capture for example cinder volume, scheduler , backup
-class SyncFlowMetricsWrapper(MetricsWrapper):
-    def __init__(self,program_name,  service_log_path):
-        super(SyncFlowMetricsWrapper, self).__init__(program_name,
-                                                         service_log_path)
-
-
 class MetricUtil(object):
     '''
     Metric Utility class to put and fetch request scoped metrics in cinder api

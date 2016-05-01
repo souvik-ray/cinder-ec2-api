@@ -21,7 +21,7 @@ import webob.exc
 
 import ec2api.api
 from ec2api import context
-from ec2api.api.temp import MetricUtil
+from ec2api.api.metric_util import MetricUtil
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

@@ -35,8 +35,7 @@ from ec2api import context
 from ec2api import exception
 from ec2api.i18n import _
 from ec2api import wsgi
-from ec2api.api.ec2api_metricutil import Ec2APIMetricsWrapper
-
+from ec2api.api.metric_util import MetricUtil
 LOG = logging.getLogger(__name__)
 
 ec2_opts = [
@@ -71,15 +70,18 @@ class FaultWrapper(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
+        metricUtil = MetricUtil()
+        metrics = metricUtil.initialize_thread_local_metrics(req)
         try:
-            return self.get_request_response(req)
+            return req.get_response(self.application)
         except Exception as e:
             LOG.exception(_("FaultWrapper cathes error"))
             return faults.Fault(webob.exc.HTTPInternalServerError())
+        finally:
+                metrics.close()
 
-    @Ec2APIMetricsWrapper
     def get_request_response(self, req):
-        return req.get_response(self.application)
+
 
 class RequestLogging(wsgi.Middleware):
 
@@ -206,12 +208,16 @@ class EC2KeystoneAuth(wsgi.Middleware):
         user_id = req.params.get('UserId')
         project_id = req.params.get('ProjectId')
         request_id = req.params.get('RequestId')
+        action = req.params.get('Action')
         if not request_id:
             request_id = context.generate_request_id()
-        #metrics.add_property("TenantId",  project_id)
-        #metrics.add_property("RemoteAddress", request.remote_addr)
-        #metrics.add_property("RequestId", request_id)
+        metrics = MetricUtil().fetch_thread_local_metrics()
+        metrics.add_property("ProjectId",  project_id)
+        metrics.add_property("UserId",  user_id)
+        metrics.add_property("RemoteAddress", request.remote_addr)
+        metrics.add_property("RequestId", request_id)
         #metrics.add_property("PathInfo", path_info)
+        metrics.add_property("OperationName", action)
 
         if (not token_id) or (not user_id) or (not project_id) :
             msg = _("Missing Authorization Credentials.")
